@@ -7,8 +7,7 @@
     "calendar"
   ],
   "files": [
-    "dist",
-    "dist/weekview.d.ts"
+    "dist/**"
   ],
   "author": {
     "name": "twinssbc"
