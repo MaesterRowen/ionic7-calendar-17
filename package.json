@@ -1,5 +1,5 @@
 {
-  "name": "ionic2-calendar",
+  "name": "ionic7-calendar-16",
   "version": "1.0.1",
   "description": "Ionic2 calendar component",
   "keywords": [
@@ -23,7 +23,7 @@
   "peerDependencies": {
     "@angular/common": "^16.0.4",
     "@angular/core": "^16.0.4",
-    "@ionic/angular": "^6.5.1",
+    "@ionic/angular": "^7.0.10",
     "swiper": "^8.4.6"
   },
   "devDependencies": {
