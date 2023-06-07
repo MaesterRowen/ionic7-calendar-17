@@ -6,6 +6,9 @@
     "Ionic2",
     "calendar"
   ],
+  "files": [
+    "dist/*.*"
+  ],
   "author": {
     "name": "twinssbc"
   },
