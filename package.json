@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && ng build",
-    "prepare": "ng build && copy ./dist/*.* ./"
+    "prepare": "ng build"
   },
   "dependencies": {
     "tslib": "^2.3.0"
