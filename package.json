@@ -12,6 +12,7 @@
   "author": {
     "name": "twinssbc"
   },
+  "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
