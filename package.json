@@ -26,8 +26,8 @@
     "tslib": "^2.3.0"
   },
   "peerDependencies": {
-    "@angular/common": "^16.0.4",
-    "@angular/core": "^16.0.4",
+    "@angular/common": "^17.0.2",
+    "@angular/core": "^17.0.2",
     "@ionic/angular": "^7.0.10",
     "swiper": "^8.4.6"
   },
