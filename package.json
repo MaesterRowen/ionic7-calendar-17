@@ -1,9 +1,9 @@
 {
-  "name": "ionic7-calendar-16",
-  "version": "1.0.1",
-  "description": "Ionic2 calendar component",
+  "name": "ionic7-calendar-17",
+  "version": "1.0.2",
+  "description": "Ionic7 calendar component",
   "keywords": [
-    "Ionic2",
+    "Ionic7",
     "calendar"
   ],
   "files": [
@@ -32,10 +32,10 @@
     "swiper": "^8.4.6"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^16.0.4",
-    "@angular/cli": "~16.0.4",
-    "@angular/compiler-cli": "^16.0.4",
-    "ng-packagr": "^16.0.1",
-    "typescript": "~4.9.4"
+    "@angular-devkit/build-angular": "^17.0.0",
+    "@angular/cli": "^17.0.0",
+    "@angular/compiler-cli": "^17.0.2",
+    "ng-packagr": "^17.0.0",
+    "typescript": "~5.2.2"
   }
 }
