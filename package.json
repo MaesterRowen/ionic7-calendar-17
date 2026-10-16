@@ -9,6 +9,9 @@
   "files": [
     "dist/**"
   ],
+  "main": "dist/fesm2022/ionic7-calendar-17.mjs",
+  "module": "dist/fesm2022/ionic7-calendar-17.mjs",
+  "types": "dist/index.d.ts",
   "author": {
     "name": "twinssbc"
   },
@@ -34,6 +37,7 @@
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.0.0",
     "@angular/cli": "^17.0.0",
+    "@angular/compiler": "^17.0.2",
     "@angular/compiler-cli": "^17.0.2",
     "ng-packagr": "^17.0.0",
     "typescript": "~5.2.2"
