@@ -10,6 +10,7 @@ SwiperCore.use([IonicSlides]);
 
 @Component({
     selector: 'calendar',
+    standalone: false,
     template: `
         <ng-template #monthviewDefaultDisplayEventTemplate let-view="view" let-row="row" let-col="col">
             {{view.dates[row*7+col].label}}

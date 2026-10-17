@@ -39,6 +39,7 @@ import {CalendarService} from './calendar.service';
 
 @Component({
     selector: 'weekview',
+    standalone: false,
     template: `
         <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()"
                     class="slides-container">

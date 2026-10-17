@@ -14,6 +14,7 @@ import {
 
 @Component({
     selector: 'init-position-scroll',
+    standalone: false,
     template: `
         <div class="scroll-content" style="height:100%">
             <ng-content></ng-content>

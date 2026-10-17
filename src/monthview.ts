@@ -21,6 +21,7 @@ import {CalendarService} from './calendar.service';
 
 @Component({
     selector: 'monthview',
+    standalone: false,
     template: `
         <div>
             <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()">

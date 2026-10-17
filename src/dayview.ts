@@ -37,6 +37,7 @@ import {CalendarService} from './calendar.service';
 
 @Component({
     selector: 'dayview',
+    standalone: false,
     template: `
         <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()" class="slides-container">
             <ng-template swiperSlide class="slide-container">
