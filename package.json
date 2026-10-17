@@ -35,20 +35,20 @@
     "swiper": "^8.4.6"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "19.2.27",
-    "@angular/cli": "19.2.27",
-    "@angular/common": "19.2.25",
-    "@angular/compiler": "19.2.25",
-    "@angular/compiler-cli": "19.2.25",
-    "@angular/core": "19.2.25",
-    "@angular/forms": "19.2.25",
-    "@angular/platform-browser": "19.2.25",
-    "@angular/router": "19.2.25",
+    "@angular-devkit/build-angular": "20.3.40",
+    "@angular/cli": "20.3.40",
+    "@angular/common": "20.3.34",
+    "@angular/compiler": "20.3.34",
+    "@angular/compiler-cli": "20.3.34",
+    "@angular/core": "20.3.34",
+    "@angular/forms": "20.3.34",
+    "@angular/platform-browser": "20.3.34",
+    "@angular/router": "20.3.34",
     "@ionic/angular": "7.8.6",
-    "ng-packagr": "19.2.2",
+    "ng-packagr": "20.3.2",
     "rxjs": "7.8.2",
     "swiper": "8.4.6",
-    "typescript": "5.5.4",
+    "typescript": "5.8.3",
     "zone.js": "0.15.1"
   }
 }
