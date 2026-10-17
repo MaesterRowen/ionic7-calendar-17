@@ -1,1 +1,1 @@
-export * from './dist/calendar.interface';
+export * from './dist/index';
