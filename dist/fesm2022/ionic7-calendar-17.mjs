@@ -2,11 +2,10 @@ import * as i0 from '@angular/core';
 import { Injectable, EventEmitter, Output, Input, ViewChild, Component, ViewEncapsulation, HostBinding, LOCALE_ID, Inject, NgModule } from '@angular/core';
 import * as i2 from '@angular/common';
 import { DatePipe, CommonModule } from '@angular/common';
-import * as i2$1 from '@ionic/angular/lazy';
-import { IonicModule } from '@ionic/angular/lazy';
+import * as i2$1 from '@ionic/angular';
+import { IonicSlides, IonItem, IonList } from '@ionic/angular';
 import SwiperCore, { Swiper } from 'swiper';
 import { Subject } from 'rxjs';
-import { IonicSlides } from '@ionic/angular';
 
 class CalendarService {
     constructor() {
@@ -2192,8 +2191,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
 
 class NgCalendarModule {
     static { this.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule }); }
-    static { this.ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, declarations: [MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent], imports: [IonicModule, CommonModule], exports: [CalendarComponent] }); }
-    static { this.ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, imports: [IonicModule, CommonModule] }); }
+    static { this.ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, declarations: [MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent], imports: [IonItem, IonList, CommonModule], exports: [CalendarComponent] }); }
+    static { this.ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, imports: [IonItem, IonList, CommonModule] }); }
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, decorators: [{
             type: NgModule,
@@ -2201,7 +2200,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
                     declarations: [
                         MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent
                     ],
-                    imports: [IonicModule, CommonModule],
+                    imports: [IonItem, IonList, CommonModule],
                     exports: [CalendarComponent]
                 }]
         }] });

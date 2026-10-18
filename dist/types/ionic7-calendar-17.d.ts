@@ -2,7 +2,7 @@ import * as i0 from '@angular/core';
 import { TemplateRef, EventEmitter, OnInit, OnDestroy, OnChanges, AfterViewInit, NgZone, ElementRef, SimpleChanges } from '@angular/core';
 import { SwiperOptions } from 'swiper/types';
 import { Observable } from 'rxjs';
-import * as i6 from '@ionic/angular/lazy';
+import * as i6 from '@ionic/angular';
 import * as i7 from '@angular/common';
 
 interface IEvent {
@@ -534,7 +534,7 @@ declare class initPositionScrollComponent implements OnChanges, AfterViewInit, O
 
 declare class NgCalendarModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<NgCalendarModule, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<NgCalendarModule, [typeof MonthViewComponent, typeof WeekViewComponent, typeof DayViewComponent, typeof CalendarComponent, typeof initPositionScrollComponent], [typeof i6.IonicModule, typeof i7.CommonModule], [typeof CalendarComponent]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<NgCalendarModule, [typeof MonthViewComponent, typeof WeekViewComponent, typeof DayViewComponent, typeof CalendarComponent, typeof initPositionScrollComponent], [typeof i6.IonItem, typeof i6.IonList, typeof i7.CommonModule], [typeof CalendarComponent]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<NgCalendarModule>;
 }
 

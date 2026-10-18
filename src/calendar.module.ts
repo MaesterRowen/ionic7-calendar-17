@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular/lazy';
+import { IonItem, IonList } from '@ionic/angular';
 import { MonthViewComponent } from './monthview';
 import { WeekViewComponent } from './weekview';
 import { DayViewComponent } from './dayview';
@@ -11,7 +11,7 @@ import { initPositionScrollComponent } from './init-position-scroll';
     declarations: [
         MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent
     ],
-    imports: [IonicModule, CommonModule],
+    imports: [IonItem, IonList, CommonModule],
     exports: [CalendarComponent]
 })
 export class NgCalendarModule {}
