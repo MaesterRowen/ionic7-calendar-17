@@ -1,7 +1,6 @@
 import * as i0 from '@angular/core';
-import { TemplateRef, EventEmitter, OnInit, OnDestroy, OnChanges, AfterViewInit, NgZone, SimpleChanges, ElementRef } from '@angular/core';
-import * as i8 from 'swiper/angular';
-import { SwiperComponent } from 'swiper/angular';
+import { TemplateRef, EventEmitter, OnInit, OnDestroy, OnChanges, AfterViewInit, NgZone, ElementRef, SimpleChanges } from '@angular/core';
+import { SwiperOptions } from 'swiper/types';
 import { Observable } from 'rxjs';
 import * as i6 from '@ionic/angular';
 import * as i7 from '@angular/common';
@@ -11,6 +10,7 @@ interface IEvent {
     endTime: Date;
     startTime: Date;
     title: string;
+    category?: string;
 }
 interface IRange {
     startTime: Date;
@@ -21,9 +21,14 @@ interface IView {
 interface IDayView extends IView {
     allDayEvents: IDisplayAllDayEvent[];
     rows: IDayViewRow[];
+    categorizedAllDayEventsMap: Map<string, IDisplayAllDayEvent[]>;
 }
+/**
+ * should be renamed to IDayViewCell since row could be vertically sliced into pieces of categories
+ */
 interface IDayViewRow {
     events: IDisplayEvent[];
+    eventsGroupByCategory?: Map<string, IDisplayEvent[]>;
     time: Date;
 }
 interface IMonthView extends IView {
@@ -93,11 +98,15 @@ interface ITimeSelected {
     events: IEvent[];
     selectedTime: Date;
     disabled: boolean;
+    category?: string;
 }
 interface IMonthViewDisplayEventTemplateContext {
-    view: IView;
-    row: number;
-    col: number;
+    view?: IView;
+    row?: number;
+    col?: number;
+    showEventDetail?: boolean;
+    selectedDate?: IMonthViewRow;
+    noEventsLabel?: string;
 }
 interface IMonthViewEventDetailTemplateContext {
     selectedDate: ITimeSelected;
@@ -105,19 +114,25 @@ interface IMonthViewEventDetailTemplateContext {
 }
 interface IWeekViewAllDayEventSectionTemplateContext {
     day: IWeekViewDateRow;
-    eventTemplate: TemplateRef<IDisplayAllDayEvent>;
+    eventTemplate?: TemplateRef<IDisplayAllDayEvent>;
 }
 interface IWeekViewNormalEventSectionTemplateContext {
     tm: IWeekViewRow;
-    eventTemplate: TemplateRef<IDisplayEvent>;
+    eventTemplate?: TemplateRef<IDisplayEvent>;
+    hourParts?: number;
 }
 interface IDayViewAllDayEventSectionTemplateContext {
-    alldayEvents: IDisplayAllDayEvent[];
-    eventTemplate: TemplateRef<IDisplayAllDayEvent>;
+    allDayEvents: IDisplayAllDayEvent[];
+    eventTemplate?: TemplateRef<IDisplayAllDayEvent>;
 }
 interface IDayViewNormalEventSectionTemplateContext {
     tm: IDayViewRow;
-    eventTemplate: TemplateRef<IDisplayEvent>;
+    eventTemplate?: TemplateRef<IDisplayEvent>;
+    hourParts?: number;
+    category?: string;
+}
+interface IDayViewCategoryItemTemplateContext {
+    category: string;
 }
 interface IDateFormatter {
     formatMonthViewDay?: {
@@ -185,7 +200,8 @@ declare class MonthViewComponent implements ICalendarComponent, OnInit, OnDestro
     private calendarService;
     private zone;
     constructor(calendarService: CalendarService, zone: NgZone);
-    slider: SwiperComponent;
+    private slider;
+    swiperElement?: ElementRef;
     monthviewDisplayEventTemplate: TemplateRef<IMonthViewDisplayEventTemplateContext>;
     monthviewInactiveDisplayEventTemplate: TemplateRef<IMonthViewDisplayEventTemplateContext>;
     monthviewEventDetailTemplate: TemplateRef<IMonthViewDisplayEventTemplateContext>;
@@ -204,7 +220,7 @@ declare class MonthViewComponent implements ICalendarComponent, OnInit, OnDestro
     lockSwipeToPrev?: boolean;
     lockSwipeToNext?: boolean;
     lockSwipes?: boolean;
-    sliderOptions: any;
+    sliderOptions?: SwiperOptions;
     onRangeChanged: EventEmitter<IRange>;
     onEventSelected: EventEmitter<IEvent>;
     onTimeSelected: EventEmitter<ITimeSelected>;
@@ -217,7 +233,6 @@ declare class MonthViewComponent implements ICalendarComponent, OnInit, OnDestro
     direction: number;
     private moveOnSelected;
     private inited;
-    private callbackOnInit;
     private currentDateChangedFromParentSubscription?;
     private eventSourceChangedSubscription?;
     private slideChangedSubscription?;
@@ -231,7 +246,7 @@ declare class MonthViewComponent implements ICalendarComponent, OnInit, OnDestro
     ngOnChanges(changes: SimpleChanges): void;
     ngAfterViewInit(): void;
     setSwiperInstance(swiper: any): void;
-    onSlideChanged(): void;
+    onSlideChanged(direction: number): void;
     move(direction: number): void;
     createDateObject(date: Date): IMonthViewRow;
     getViewData(startTime: Date): IMonthView;
@@ -254,8 +269,9 @@ declare class WeekViewComponent implements ICalendarComponent, OnInit, OnChanges
     private elm;
     private zone;
     constructor(calendarService: CalendarService, elm: ElementRef, zone: NgZone);
+    private slider;
+    swiperElement?: ElementRef;
     class: boolean;
-    slider: SwiperComponent;
     weekviewHeaderTemplate: TemplateRef<IDisplayWeekViewHeader>;
     weekviewAllDayEventTemplate: TemplateRef<IDisplayAllDayEvent>;
     weekviewNormalEventTemplate: TemplateRef<IDisplayEvent>;
@@ -282,20 +298,20 @@ declare class WeekViewComponent implements ICalendarComponent, OnInit, OnChanges
     lockSwipes?: boolean;
     startHour: number;
     endHour: number;
-    sliderOptions: any;
+    sliderOptions?: SwiperOptions;
     hourSegments: number;
     onRangeChanged: EventEmitter<IRange>;
     onEventSelected: EventEmitter<IEvent>;
     onTimeSelected: EventEmitter<ITimeSelected>;
     onDayHeaderSelected: EventEmitter<ITimeSelected>;
     onTitleChanged: EventEmitter<string>;
+    readonly sliderIndexList: number[];
     views: IWeekView[];
     currentViewIndex: number;
     range: IRange;
     direction: number;
     mode: CalendarMode;
     private inited;
-    private callbackOnInit;
     private currentDateChangedFromParentSubscription?;
     private eventSourceChangedSubscription?;
     private slideChangedSubscription?;
@@ -314,7 +330,7 @@ declare class WeekViewComponent implements ICalendarComponent, OnInit, OnChanges
     ngAfterViewInit(): void;
     ngOnChanges(changes: SimpleChanges): void;
     ngOnDestroy(): void;
-    onSlideChanged(): void;
+    onSlideChanged(direction: number): void;
     move(direction: number): void;
     private getHourColumnLabels;
     getViewData(startTime: Date): IWeekView;
@@ -340,8 +356,10 @@ declare class DayViewComponent implements ICalendarComponent, OnInit, OnChanges,
     private elm;
     private zone;
     constructor(calendarService: CalendarService, elm: ElementRef, zone: NgZone);
+    private slider;
+    swiperElement?: ElementRef;
     class: boolean;
-    slider: SwiperComponent;
+    dayviewCategoryItemTemplate: TemplateRef<IDayViewCategoryItemTemplateContext>;
     dayviewAllDayEventTemplate: TemplateRef<IDisplayAllDayEvent>;
     dayviewNormalEventTemplate: TemplateRef<IDisplayEvent>;
     dayviewAllDayEventSectionTemplate: TemplateRef<IDayViewAllDayEventSectionTemplateContext>;
@@ -364,12 +382,15 @@ declare class DayViewComponent implements ICalendarComponent, OnInit, OnChanges,
     lockSwipes?: boolean;
     startHour: number;
     endHour: number;
-    sliderOptions: any;
+    sliderOptions?: SwiperOptions;
     hourSegments: number;
+    dayviewCategorySource?: Set<string>;
+    dayviewShowCategoryView?: boolean;
     onRangeChanged: EventEmitter<IRange>;
     onEventSelected: EventEmitter<IEvent>;
     onTimeSelected: EventEmitter<ITimeSelected>;
     onTitleChanged: EventEmitter<string>;
+    readonly sliderIndexList: number[];
     views: IDayView[];
     currentViewIndex: number;
     direction: number;
@@ -393,15 +414,16 @@ declare class DayViewComponent implements ICalendarComponent, OnInit, OnChanges,
     ngAfterViewInit(): void;
     ngOnChanges(changes: SimpleChanges): void;
     ngOnDestroy(): void;
-    onSlideChanged(): void;
+    onSlideChanged(direction: number): void;
     move(direction: number): void;
     private getHourColumnLabels;
     getViewData(startTime: Date): IDayView;
     getRange(currentDate: Date): IRange;
     onDataLoaded(): void;
+    categorizeAllDayEvents(allDayEvents: IDisplayAllDayEvent[]): void;
     refreshView(): void;
     getTitle(): string;
-    select(selectedTime: Date, events: IDisplayEvent[]): void;
+    select(row: IDayViewRow, category?: string): void;
     placeEvents(orderedEvents: IDisplayEvent[]): void;
     placeAllDayEvents(orderedEvents: IDisplayEvent[]): void;
     overlap(event1: IDisplayEvent, event2: IDisplayEvent): boolean;
@@ -409,7 +431,7 @@ declare class DayViewComponent implements ICalendarComponent, OnInit, OnChanges,
     eventSelected(event: IEvent): void;
     setScrollPosition(scrollPosition: number): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<DayViewComponent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<DayViewComponent, "dayview", never, { "dayviewAllDayEventTemplate": { "alias": "dayviewAllDayEventTemplate"; "required": false; }; "dayviewNormalEventTemplate": { "alias": "dayviewNormalEventTemplate"; "required": false; }; "dayviewAllDayEventSectionTemplate": { "alias": "dayviewAllDayEventSectionTemplate"; "required": false; }; "dayviewNormalEventSectionTemplate": { "alias": "dayviewNormalEventSectionTemplate"; "required": false; }; "dayviewInactiveAllDayEventSectionTemplate": { "alias": "dayviewInactiveAllDayEventSectionTemplate"; "required": false; }; "dayviewInactiveNormalEventSectionTemplate": { "alias": "dayviewInactiveNormalEventSectionTemplate"; "required": false; }; "formatHourColumn": { "alias": "formatHourColumn"; "required": false; }; "formatDayTitle": { "alias": "formatDayTitle"; "required": false; }; "allDayLabel": { "alias": "allDayLabel"; "required": false; }; "hourParts": { "alias": "hourParts"; "required": false; }; "eventSource": { "alias": "eventSource"; "required": false; }; "markDisabled": { "alias": "markDisabled"; "required": false; }; "locale": { "alias": "locale"; "required": false; }; "dateFormatter": { "alias": "dateFormatter"; "required": false; }; "dir": { "alias": "dir"; "required": false; }; "scrollToHour": { "alias": "scrollToHour"; "required": false; }; "preserveScrollPosition": { "alias": "preserveScrollPosition"; "required": false; }; "lockSwipeToPrev": { "alias": "lockSwipeToPrev"; "required": false; }; "lockSwipeToNext": { "alias": "lockSwipeToNext"; "required": false; }; "lockSwipes": { "alias": "lockSwipes"; "required": false; }; "startHour": { "alias": "startHour"; "required": false; }; "endHour": { "alias": "endHour"; "required": false; }; "sliderOptions": { "alias": "sliderOptions"; "required": false; }; "hourSegments": { "alias": "hourSegments"; "required": false; }; }, { "onRangeChanged": "onRangeChanged"; "onEventSelected": "onEventSelected"; "onTimeSelected": "onTimeSelected"; "onTitleChanged": "onTitleChanged"; }, never, never, false, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<DayViewComponent, "dayview", never, { "dayviewCategoryItemTemplate": { "alias": "dayviewCategoryItemTemplate"; "required": false; }; "dayviewAllDayEventTemplate": { "alias": "dayviewAllDayEventTemplate"; "required": false; }; "dayviewNormalEventTemplate": { "alias": "dayviewNormalEventTemplate"; "required": false; }; "dayviewAllDayEventSectionTemplate": { "alias": "dayviewAllDayEventSectionTemplate"; "required": false; }; "dayviewNormalEventSectionTemplate": { "alias": "dayviewNormalEventSectionTemplate"; "required": false; }; "dayviewInactiveAllDayEventSectionTemplate": { "alias": "dayviewInactiveAllDayEventSectionTemplate"; "required": false; }; "dayviewInactiveNormalEventSectionTemplate": { "alias": "dayviewInactiveNormalEventSectionTemplate"; "required": false; }; "formatHourColumn": { "alias": "formatHourColumn"; "required": false; }; "formatDayTitle": { "alias": "formatDayTitle"; "required": false; }; "allDayLabel": { "alias": "allDayLabel"; "required": false; }; "hourParts": { "alias": "hourParts"; "required": false; }; "eventSource": { "alias": "eventSource"; "required": false; }; "markDisabled": { "alias": "markDisabled"; "required": false; }; "locale": { "alias": "locale"; "required": false; }; "dateFormatter": { "alias": "dateFormatter"; "required": false; }; "dir": { "alias": "dir"; "required": false; }; "scrollToHour": { "alias": "scrollToHour"; "required": false; }; "preserveScrollPosition": { "alias": "preserveScrollPosition"; "required": false; }; "lockSwipeToPrev": { "alias": "lockSwipeToPrev"; "required": false; }; "lockSwipeToNext": { "alias": "lockSwipeToNext"; "required": false; }; "lockSwipes": { "alias": "lockSwipes"; "required": false; }; "startHour": { "alias": "startHour"; "required": false; }; "endHour": { "alias": "endHour"; "required": false; }; "sliderOptions": { "alias": "sliderOptions"; "required": false; }; "hourSegments": { "alias": "hourSegments"; "required": false; }; "dayviewCategorySource": { "alias": "dayviewCategorySource"; "required": false; }; "dayviewShowCategoryView": { "alias": "dayviewShowCategoryView"; "required": false; }; }, { "onRangeChanged": "onRangeChanged"; "onEventSelected": "onEventSelected"; "onTimeSelected": "onTimeSelected"; "onTitleChanged": "onTitleChanged"; }, never, never, false, never>;
 }
 
 declare class CalendarComponent implements OnInit {
@@ -443,6 +465,7 @@ declare class CalendarComponent implements OnInit {
     weekviewHeaderTemplate?: TemplateRef<IDisplayWeekViewHeader>;
     weekviewAllDayEventTemplate?: TemplateRef<IDisplayAllDayEvent>;
     weekviewNormalEventTemplate?: TemplateRef<IDisplayEvent>;
+    dayviewCategoryItemTemplate?: TemplateRef<string>;
     dayviewAllDayEventTemplate?: TemplateRef<IDisplayAllDayEvent>;
     dayviewNormalEventTemplate?: TemplateRef<IDisplayEvent>;
     weekviewAllDayEventSectionTemplate?: TemplateRef<IWeekViewAllDayEventSectionTemplateContext>;
@@ -464,6 +487,8 @@ declare class CalendarComponent implements OnInit {
     startHour: number;
     endHour: number;
     sliderOptions: any;
+    dayviewCategorySource?: Set<string>;
+    dayviewShowCategoryView: boolean;
     onCurrentDateChanged: EventEmitter<Date>;
     onRangeChanged: EventEmitter<IRange>;
     onEventSelected: EventEmitter<IEvent>;
@@ -487,7 +512,7 @@ declare class CalendarComponent implements OnInit {
     slidePrev(): void;
     update(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<CalendarComponent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<CalendarComponent, "calendar", never, { "currentDate": { "alias": "currentDate"; "required": false; }; "eventSource": { "alias": "eventSource"; "required": false; }; "calendarMode": { "alias": "calendarMode"; "required": false; }; "formatDay": { "alias": "formatDay"; "required": false; }; "formatDayHeader": { "alias": "formatDayHeader"; "required": false; }; "formatDayTitle": { "alias": "formatDayTitle"; "required": false; }; "formatWeekTitle": { "alias": "formatWeekTitle"; "required": false; }; "formatMonthTitle": { "alias": "formatMonthTitle"; "required": false; }; "formatWeekViewDayHeader": { "alias": "formatWeekViewDayHeader"; "required": false; }; "formatHourColumn": { "alias": "formatHourColumn"; "required": false; }; "showEventDetail": { "alias": "showEventDetail"; "required": false; }; "startingDayMonth": { "alias": "startingDayMonth"; "required": false; }; "startingDayWeek": { "alias": "startingDayWeek"; "required": false; }; "allDayLabel": { "alias": "allDayLabel"; "required": false; }; "noEventsLabel": { "alias": "noEventsLabel"; "required": false; }; "queryMode": { "alias": "queryMode"; "required": false; }; "step": { "alias": "step"; "required": false; }; "timeInterval": { "alias": "timeInterval"; "required": false; }; "autoSelect": { "alias": "autoSelect"; "required": false; }; "markDisabled": { "alias": "markDisabled"; "required": false; }; "monthviewDisplayEventTemplate": { "alias": "monthviewDisplayEventTemplate"; "required": false; }; "monthviewInactiveDisplayEventTemplate": { "alias": "monthviewInactiveDisplayEventTemplate"; "required": false; }; "monthviewEventDetailTemplate": { "alias": "monthviewEventDetailTemplate"; "required": false; }; "weekviewHeaderTemplate": { "alias": "weekviewHeaderTemplate"; "required": false; }; "weekviewAllDayEventTemplate": { "alias": "weekviewAllDayEventTemplate"; "required": false; }; "weekviewNormalEventTemplate": { "alias": "weekviewNormalEventTemplate"; "required": false; }; "dayviewAllDayEventTemplate": { "alias": "dayviewAllDayEventTemplate"; "required": false; }; "dayviewNormalEventTemplate": { "alias": "dayviewNormalEventTemplate"; "required": false; }; "weekviewAllDayEventSectionTemplate": { "alias": "weekviewAllDayEventSectionTemplate"; "required": false; }; "weekviewNormalEventSectionTemplate": { "alias": "weekviewNormalEventSectionTemplate"; "required": false; }; "dayviewAllDayEventSectionTemplate": { "alias": "dayviewAllDayEventSectionTemplate"; "required": false; }; "dayviewNormalEventSectionTemplate": { "alias": "dayviewNormalEventSectionTemplate"; "required": false; }; "weekviewInactiveAllDayEventSectionTemplate": { "alias": "weekviewInactiveAllDayEventSectionTemplate"; "required": false; }; "weekviewInactiveNormalEventSectionTemplate": { "alias": "weekviewInactiveNormalEventSectionTemplate"; "required": false; }; "dayviewInactiveAllDayEventSectionTemplate": { "alias": "dayviewInactiveAllDayEventSectionTemplate"; "required": false; }; "dayviewInactiveNormalEventSectionTemplate": { "alias": "dayviewInactiveNormalEventSectionTemplate"; "required": false; }; "dateFormatter": { "alias": "dateFormatter"; "required": false; }; "dir": { "alias": "dir"; "required": false; }; "scrollToHour": { "alias": "scrollToHour"; "required": false; }; "preserveScrollPosition": { "alias": "preserveScrollPosition"; "required": false; }; "lockSwipeToPrev": { "alias": "lockSwipeToPrev"; "required": false; }; "lockSwipeToNext": { "alias": "lockSwipeToNext"; "required": false; }; "lockSwipes": { "alias": "lockSwipes"; "required": false; }; "locale": { "alias": "locale"; "required": false; }; "startHour": { "alias": "startHour"; "required": false; }; "endHour": { "alias": "endHour"; "required": false; }; "sliderOptions": { "alias": "sliderOptions"; "required": false; }; }, { "onCurrentDateChanged": "onCurrentDateChanged"; "onRangeChanged": "onRangeChanged"; "onEventSelected": "onEventSelected"; "onTimeSelected": "onTimeSelected"; "onDayHeaderSelected": "onDayHeaderSelected"; "onTitleChanged": "onTitleChanged"; }, never, never, false, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<CalendarComponent, "calendar", never, { "currentDate": { "alias": "currentDate"; "required": false; }; "eventSource": { "alias": "eventSource"; "required": false; }; "calendarMode": { "alias": "calendarMode"; "required": false; }; "formatDay": { "alias": "formatDay"; "required": false; }; "formatDayHeader": { "alias": "formatDayHeader"; "required": false; }; "formatDayTitle": { "alias": "formatDayTitle"; "required": false; }; "formatWeekTitle": { "alias": "formatWeekTitle"; "required": false; }; "formatMonthTitle": { "alias": "formatMonthTitle"; "required": false; }; "formatWeekViewDayHeader": { "alias": "formatWeekViewDayHeader"; "required": false; }; "formatHourColumn": { "alias": "formatHourColumn"; "required": false; }; "showEventDetail": { "alias": "showEventDetail"; "required": false; }; "startingDayMonth": { "alias": "startingDayMonth"; "required": false; }; "startingDayWeek": { "alias": "startingDayWeek"; "required": false; }; "allDayLabel": { "alias": "allDayLabel"; "required": false; }; "noEventsLabel": { "alias": "noEventsLabel"; "required": false; }; "queryMode": { "alias": "queryMode"; "required": false; }; "step": { "alias": "step"; "required": false; }; "timeInterval": { "alias": "timeInterval"; "required": false; }; "autoSelect": { "alias": "autoSelect"; "required": false; }; "markDisabled": { "alias": "markDisabled"; "required": false; }; "monthviewDisplayEventTemplate": { "alias": "monthviewDisplayEventTemplate"; "required": false; }; "monthviewInactiveDisplayEventTemplate": { "alias": "monthviewInactiveDisplayEventTemplate"; "required": false; }; "monthviewEventDetailTemplate": { "alias": "monthviewEventDetailTemplate"; "required": false; }; "weekviewHeaderTemplate": { "alias": "weekviewHeaderTemplate"; "required": false; }; "weekviewAllDayEventTemplate": { "alias": "weekviewAllDayEventTemplate"; "required": false; }; "weekviewNormalEventTemplate": { "alias": "weekviewNormalEventTemplate"; "required": false; }; "dayviewCategoryItemTemplate": { "alias": "dayviewCategoryItemTemplate"; "required": false; }; "dayviewAllDayEventTemplate": { "alias": "dayviewAllDayEventTemplate"; "required": false; }; "dayviewNormalEventTemplate": { "alias": "dayviewNormalEventTemplate"; "required": false; }; "weekviewAllDayEventSectionTemplate": { "alias": "weekviewAllDayEventSectionTemplate"; "required": false; }; "weekviewNormalEventSectionTemplate": { "alias": "weekviewNormalEventSectionTemplate"; "required": false; }; "dayviewAllDayEventSectionTemplate": { "alias": "dayviewAllDayEventSectionTemplate"; "required": false; }; "dayviewNormalEventSectionTemplate": { "alias": "dayviewNormalEventSectionTemplate"; "required": false; }; "weekviewInactiveAllDayEventSectionTemplate": { "alias": "weekviewInactiveAllDayEventSectionTemplate"; "required": false; }; "weekviewInactiveNormalEventSectionTemplate": { "alias": "weekviewInactiveNormalEventSectionTemplate"; "required": false; }; "dayviewInactiveAllDayEventSectionTemplate": { "alias": "dayviewInactiveAllDayEventSectionTemplate"; "required": false; }; "dayviewInactiveNormalEventSectionTemplate": { "alias": "dayviewInactiveNormalEventSectionTemplate"; "required": false; }; "dateFormatter": { "alias": "dateFormatter"; "required": false; }; "dir": { "alias": "dir"; "required": false; }; "scrollToHour": { "alias": "scrollToHour"; "required": false; }; "preserveScrollPosition": { "alias": "preserveScrollPosition"; "required": false; }; "lockSwipeToPrev": { "alias": "lockSwipeToPrev"; "required": false; }; "lockSwipeToNext": { "alias": "lockSwipeToNext"; "required": false; }; "lockSwipes": { "alias": "lockSwipes"; "required": false; }; "locale": { "alias": "locale"; "required": false; }; "startHour": { "alias": "startHour"; "required": false; }; "endHour": { "alias": "endHour"; "required": false; }; "sliderOptions": { "alias": "sliderOptions"; "required": false; }; "dayviewCategorySource": { "alias": "dayviewCategorySource"; "required": false; }; "dayviewShowCategoryView": { "alias": "dayviewShowCategoryView"; "required": false; }; }, { "onCurrentDateChanged": "onCurrentDateChanged"; "onRangeChanged": "onRangeChanged"; "onEventSelected": "onEventSelected"; "onTimeSelected": "onTimeSelected"; "onDayHeaderSelected": "onDayHeaderSelected"; "onTitleChanged": "onTitleChanged"; }, never, never, false, never>;
 }
 
 declare class initPositionScrollComponent implements OnChanges, AfterViewInit, OnDestroy {
@@ -509,9 +534,9 @@ declare class initPositionScrollComponent implements OnChanges, AfterViewInit, O
 
 declare class NgCalendarModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<NgCalendarModule, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<NgCalendarModule, [typeof MonthViewComponent, typeof WeekViewComponent, typeof DayViewComponent, typeof CalendarComponent, typeof initPositionScrollComponent], [typeof i6.IonicModule, typeof i7.CommonModule, typeof i8.SwiperModule], [typeof CalendarComponent]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<NgCalendarModule, [typeof MonthViewComponent, typeof WeekViewComponent, typeof DayViewComponent, typeof CalendarComponent, typeof initPositionScrollComponent], [typeof i6.IonicModule, typeof i7.CommonModule], [typeof CalendarComponent]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<NgCalendarModule>;
 }
 
 export { CalendarComponent, NgCalendarModule, Step };
-export type { CalendarMode, ICalendarComponent, IDateFormatter, IDayView, IDayViewAllDayEventSectionTemplateContext, IDayViewNormalEventSectionTemplateContext, IDayViewRow, IDisplayAllDayEvent, IDisplayEvent, IDisplayWeekViewHeader, IEvent, IMonthView, IMonthViewDisplayEventTemplateContext, IMonthViewEventDetailTemplateContext, IMonthViewRow, IRange, ITimeSelected, IView, IWeekView, IWeekViewAllDayEventSectionTemplateContext, IWeekViewDateRow, IWeekViewNormalEventSectionTemplateContext, IWeekViewRow, QueryMode };
+export type { CalendarMode, ICalendarComponent, IDateFormatter, IDayView, IDayViewAllDayEventSectionTemplateContext, IDayViewCategoryItemTemplateContext, IDayViewNormalEventSectionTemplateContext, IDayViewRow, IDisplayAllDayEvent, IDisplayEvent, IDisplayWeekViewHeader, IEvent, IMonthView, IMonthViewDisplayEventTemplateContext, IMonthViewEventDetailTemplateContext, IMonthViewRow, IRange, ITimeSelected, IView, IWeekView, IWeekViewAllDayEventSectionTemplateContext, IWeekViewDateRow, IWeekViewNormalEventSectionTemplateContext, IWeekViewRow, QueryMode };

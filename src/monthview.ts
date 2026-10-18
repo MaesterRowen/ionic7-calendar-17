@@ -9,240 +9,31 @@ import {
     TemplateRef,
     OnDestroy,
     AfterViewInit,
+    NgZone,
     ViewChild,
-    NgZone
+    ElementRef
 } from '@angular/core';
 import {Subscription} from 'rxjs';
 import {DatePipe} from '@angular/common';
-import {SwiperComponent} from 'swiper/angular';
+import {Swiper} from 'swiper';
+import {SwiperOptions} from 'swiper/types';
 
 import {ICalendarComponent, IEvent, IMonthView, IMonthViewRow, ITimeSelected, IRange, CalendarMode, IDateFormatter, IMonthViewDisplayEventTemplateContext} from './calendar.interface';
 import {CalendarService} from './calendar.service';
 
 @Component({
     selector: 'monthview',
+    templateUrl: './monthview.html',
+    styleUrls: ['./monthview.css'],
     standalone: false,
-    template: `
-        <div>
-            <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()">
-                <ng-template swiperSlide>
-                    <table *ngIf="0===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[0].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[0].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[0].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[0], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="0!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[0].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[0], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-                <ng-template swiperSlide>
-                    <table *ngIf="1===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[1].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[1].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[1].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[1], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="1!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[1].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[1], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-                <ng-template swiperSlide>
-                    <table *ngIf="2===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[2].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[2].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[2].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[2], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="2!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[2].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[2], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-            </swiper>
-            <ng-template [ngTemplateOutlet]="monthviewEventDetailTemplate"
-                         [ngTemplateOutletContext]="{showEventDetail:showEventDetail, selectedDate: selectedDate, noEventsLabel: noEventsLabel}">
-            </ng-template>
-        </div>
-    `,
-    styles: [`
-        .text-muted {
-            color: #999;
-        }
-
-        .table-fixed {
-            table-layout: fixed;
-        }
-
-        .table {
-            width: 100%;
-            max-width: 100%;
-            background-color: transparent;
-        }
-
-        .table > thead > tr > th, .table > tbody > tr > th, .table > tfoot > tr > th, .table > thead > tr > td,
-        .table > tbody > tr > td, .table > tfoot > tr > td {
-            padding: 8px;
-            line-height: 20px;
-            vertical-align: top;
-        }
-
-        .table > thead > tr > th {
-            vertical-align: bottom;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .table > thead:first-child > tr:first-child > th, .table > thead:first-child > tr:first-child > td {
-            border-top: 0
-        }
-
-        .table > tbody + tbody {
-            border-top: 2px solid #ddd;
-        }
-
-        .table-bordered {
-            border: 1px solid #ddd;
-        }
-
-        .table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th,
-        .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
-            border: 1px solid #ddd;
-        }
-
-        .table-bordered > thead > tr > th, .table-bordered > thead > tr > td {
-            border-bottom-width: 2px;
-        }
-
-        .table-striped > tbody > tr:nth-child(odd) > td, .table-striped > tbody > tr:nth-child(odd) > th {
-            background-color: #f9f9f9
-        }
-
-        .monthview-primary-with-event {
-            background-color: #3a87ad;
-            color: white;
-        }
-
-        .monthview-current {
-            background-color: #f0f0f0;
-        }
-
-        .monthview-selected {
-            background-color: #009900;
-            color: white;
-        }
-
-        .monthview-datetable td.monthview-disabled {
-            color: lightgrey;
-            cursor: default;
-        }
-
-        .monthview-datetable th {
-            text-align: center;
-        }
-
-        .monthview-datetable td {
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .monthview-secondary-with-event {
-            background-color: #d9edf7;
-        }
-
-        ::-webkit-scrollbar,
-        *::-webkit-scrollbar {
-            display: none;
-        }
-    `]
 })
 export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy, OnChanges, AfterViewInit {
 
     constructor(private calendarService: CalendarService, private zone:NgZone) {
     }  
-    @ViewChild('swiper', { static: false }) slider!: SwiperComponent;
+
+    private slider!: Swiper;
+    @ViewChild('monthViewSwiper') swiperElement?: ElementRef;
 
     @Input() monthviewDisplayEventTemplate!: TemplateRef<IMonthViewDisplayEventTemplateContext>;
     @Input() monthviewInactiveDisplayEventTemplate!: TemplateRef<IMonthViewDisplayEventTemplateContext>;
@@ -260,10 +51,10 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
     @Input() locale!: string;
     @Input() dateFormatter?: IDateFormatter;
     @Input() dir = '';
-    @Input() lockSwipeToPrev?: boolean;
-    @Input() lockSwipeToNext?: boolean;
-    @Input() lockSwipes?: boolean;
-    @Input() sliderOptions: any;
+    @Input() lockSwipeToPrev?: boolean = false;
+    @Input() lockSwipeToNext?: boolean = false;
+    @Input() lockSwipes?: boolean = false;
+    @Input() sliderOptions?: SwiperOptions;
 
     @Output() onRangeChanged = new EventEmitter<IRange>();
     @Output() onEventSelected = new EventEmitter<IEvent>();
@@ -279,7 +70,6 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
 
     private moveOnSelected = false;
     private inited = false;
-    private callbackOnInit = true;
 
     private currentDateChangedFromParentSubscription?: Subscription;
     private eventSourceChangedSubscription?: Subscription;
@@ -306,6 +96,9 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
             this.sliderOptions = {};
         }
         this.sliderOptions.loop = true;
+        this.sliderOptions.allowSlidePrev = !this.lockSwipeToPrev;
+        this.sliderOptions.allowSlideNext = !this.lockSwipeToNext;
+        this.sliderOptions.allowTouchMove = !this.lockSwipes;
 
         if (this.dateFormatter && this.dateFormatter.formatMonthViewDay) {
             this.formatDayLabel = this.dateFormatter.formatMonthViewDay;
@@ -347,14 +140,14 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
 
         this.slideChangedSubscription = this.calendarService.slideChanged$.subscribe(direction => {
             if (direction === 1) {
-                this.slider.swiperRef.slideNext();
+                this.slider.slideNext();
             } else if (direction === -1) {
-                this.slider.swiperRef.slidePrev();
+                this.slider.slidePrev();
             }
         });
 
         this.slideUpdatedSubscription = this.calendarService.slideUpdated$.subscribe(() => {
-            this.slider.swiperRef.update();
+            this.slider.update();
         });
     }
 
@@ -392,21 +185,35 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
 
         const lockSwipeToPrev = changes['lockSwipeToPrev'];
         if (lockSwipeToPrev) {
-            this.slider.swiperRef.allowSlidePrev = !lockSwipeToPrev.currentValue;
+            this.slider.allowSlidePrev = !lockSwipeToPrev.currentValue;
         }
 
         const lockSwipeToNext = changes['lockSwipeToNext'];
         if (lockSwipeToNext) {
-            this.slider.swiperRef.allowSlideNext = !lockSwipeToNext.currentValue;
+            this.slider.allowSlideNext = !lockSwipeToNext.currentValue;
         }
 
         const lockSwipes = changes['lockSwipes'];
         if (lockSwipes) {
-            this.slider.swiperRef.allowTouchMove = !lockSwipes.currentValue;
+            this.slider.allowTouchMove = !lockSwipes.currentValue;
         }
     }
 
     ngAfterViewInit() {
+        this.slider = new Swiper(this.swiperElement?.nativeElement, this.sliderOptions);
+        let me = this;
+        this.slider.on('slideNextTransitionEnd', function() {
+            me.onSlideChanged(1);
+        });
+
+        this.slider.on('slidePrevTransitionEnd', function() {
+            me.onSlideChanged(-1);
+        });
+
+        if(this.dir == 'rtl') {
+            this.slider.changeLanguageDirection('rtl');
+        }
+
         const title = this.getTitle();
         this.onTitleChanged.emit(title);
     }
@@ -415,36 +222,9 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
         this.slider = swiper;
     }
 
-    onSlideChanged() {
-        this.zone.run(() => {
-            if (this.callbackOnInit) {
-                this.callbackOnInit = false;
-                return;
-            }
-
-            let direction = 0;
-            const currentViewIndex = this.currentViewIndex;
-
-            let currentSlideIndex = this.slider.swiperRef.activeIndex;
-            currentSlideIndex = (currentSlideIndex + 2) % 3;
-            if(isNaN(currentSlideIndex)) {
-                currentSlideIndex = currentViewIndex;
-            }
-
-            if (currentSlideIndex - currentViewIndex === 1) {
-                direction = 1;
-            } else if (currentSlideIndex === 0 && currentViewIndex === 2) {
-                direction = 1;
-                this.slider.swiperRef.slideTo(1, 0, false);
-            } else if (currentViewIndex - currentSlideIndex === 1) {
-                direction = -1;
-            } else if (currentSlideIndex === 2 && currentViewIndex === 0) {
-                direction = -1;
-                this.slider.swiperRef.slideTo(3, 0, false);
-            }
-            this.currentViewIndex = currentSlideIndex;
-            this.move(direction);   
-        });
+    onSlideChanged(direction: number) {
+        this.currentViewIndex = (this.currentViewIndex + direction + 3) % 3;
+        this.move(direction);
     }
 
     move(direction: number) {
@@ -740,9 +520,9 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnDestroy
 
     slideView(direction: number) {
         if (direction === 1) {
-            this.slider.swiperRef.slideNext();
+            this.slider.slideNext();
         } else if (direction === -1) {
-            this.slider.swiperRef.slidePrev();
+            this.slider.slidePrev();
         }
     }
 

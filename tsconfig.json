@@ -1,11 +1,12 @@
 {
     "compilerOptions": {
         "paths": {
-            "ionic6-calendar-16": [
+            "ionic7-calendar-17": [
               "dist"
             ]
           },
         "baseUrl": "./",
+        "esModuleInterop": true,
         "declarationMap": false,
         "declaration": true,
         "inlineSources": true,

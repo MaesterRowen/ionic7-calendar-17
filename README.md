@@ -1,11 +1,26 @@
 # Ionic-Calendar directive
 
-Ionic calendar directive
-
-[![version](https://img.shields.io/npm/v/ionic2-calendar/latest.svg)](https://www.npmjs.com/package/ionic2-calendar)
+Ionic calendar directive  
+ionic2-calendar 
+[![version](https://img.shields.io/npm/v/ionic2-calendar/latest.svg)](https://www.npmjs.com/package/ionic2-calendar)  
+ionic8-calendar
+[![version](https://img.shields.io/npm/v/ionic8-calendar/latest.svg)](https://www.npmjs.com/package/ionic8-calendar)  
 [![GitHub License](https://img.shields.io/npm/l/ionic2-calendar.svg)](https://raw.githubusercontent.com/twinssbc/Ionic2-Calendar/master/LICENSE)
 
+# Table of Contents
+1. [Demo](#demo)  
+2. [Dependency](#dependency)
+3. [Usage](#usage)
+4. [Options](#options)
+5. [Callback](#callback)
+6. [View Customization Option](#view-customization-option)
+7. [EventSource](#eventsource)
+8. [Performance Tuning](#performance-tuning)
+9. [Common Questions](#common-questions)
+
 # Demo
+Version 2.0    
+https://stackblitz.com/edit/ionic-calendar-demo-2-2?file=src%2Fapp%2Fexample.component.html    
 Version 1.0    
 https://stackblitz.com/edit/ionic-calendar-demo-1-0?file=src%2Fapp%2Fexample.component.html    
 Version 0.x    
@@ -14,14 +29,25 @@ https://stackblitz.com/edit/ionic-calendar-demo?file=pages%2Fhome%2Fhome.html
 
 
 # Dependency
-Version 1.0.x depends on Ionic (>=6.1.9), Angular (>=15.1.2) and Swiper (>=8.4.6).   
-Version 0.6.x depends on Ionic (>=5.1.0) and Angular (>=9.1.0).    
-version 0.5.x depends on Ionic (>=4.0.0-rc.1), also supports Ionic 5.0.0.    
-version 0.4.x depends on Ionic (>=3.9.2).  
-version 0.3.x depends on Ionic (>=3.1.1).  
-version 0.2.9+ depends on Ionic (>=2.3.0).  
-version 0.2.x depends on Ionic 2.0.0-rc.5 (rc.5 has breaking change on the slide API) and  2.0.0 final version onwards.    
-version 0.1.x depends on Ionic 2.0.0-rc.1 ~ Ionic 2.0.0-rc.4    
+| Calendar Version | Ionic Version | Angular Version | Swiper Version |
+| ------------- | ------------- | ------------- | ------------- |
+| 2.8.x | >=8.0.0 | >=20.0.0 | >=12.0.0 |
+| 2.7.x | >=8.0.0 | >=20.0.0 | >=11.0.0 |
+| 2.6.x | >=8.0.0 | >=19.0.0 | >=11.0.0 |
+| 2.5.x | >=8.0.0 | >=18.0.0 | >=11.0.0 |
+| 2.4.x | >=7.0.0 | >=17.0.0 | >=11.0.0 |
+| 2.3.x | >=7.0.0 | >=17.0.0 | >=11.0.0 |
+| 2.2.x | >=7.0.0 | >=1s7.0.0 | >=10.1.0 |
+| 2.1.x | >=7.0.0 | >=16.0.0 | >=10.1.0 |
+| 2.0.x | >=7.0.0 | >=16.0.0 | [8.4.6, 9.0.0) |
+| 1.0.x | >=6.1.9 | >=15.1.2 | [8.4.6, 9.0.0) |
+| 0.6.x | >=5.1.0 | >=9.1.0 | |
+| 0.5.x | >=4.0.0-rc.1 | | |
+| 0.4.x | >=3.9.2 | | |
+| 0.3.x | >=3.1.1 | | |
+| 0.2.9+ | >=2.3.0 | | |
+| 0.2.x | 2.0.0-rc.5 | | |
+| 0.1.x | [2.0.0-rc.1, 2.0.0-rc.4] | | |
 
 version 0.2-0.4 has below dependency:      
 intl 1.2.5, due to issue https://github.com/angular/angular/issues/3333    
@@ -31,21 +57,25 @@ intl 1.2.5, due to issue https://github.com/angular/angular/issues/3333
 ## 1. Install Calendar Dependency  
 `npm install ionic2-calendar --save`
 
-### version 1.0.x onwards
+### version 1.0.x onwards  
 version 1.0.x is also published as Ionic6-Calendar package name. So could also run  
 `npm install ionic6-calendar --save`  
-<font color=red>**NOTE: Starting from Version 1.0.x, the underlying implementaion is based on Swiper instead of IonSlides, so also needs to install Swiper dependency**</font>  
+version 2.0.+ is also published as Ionic7-Calendar package name. So could also run  
+`npm install ionic7-calendar --save`  
+version 2.5.+ is also published as Ionic8-Calendar package name. So could also run  
+`npm install ionic8-calendar --save`  
+
+<font color=red>**NOTE: Starting from Version 1.0.x, the underlying implementaion is based on Swiper instead of IonSlides, so also needs to install Swiper dependency.**</font>  
 - Install swiper dependency  
 `npm install swiper --save`
 
 - Import swiper css in **global.scss**  
 ```
-@import 'swiper/scss';
-@import '@ionic/angular/css/ionic-swiper';
+@import 'swiper/css';
 ```
 
 ## 2. Import the Calendar module
-If using version 1.0.x, could use both ionic2-calendar or ionic6-calendar.
+If using version 1.0.x, could use both ionic2-calendar or ionic6-calendar, ionic7-calendar, ionic8-calendar.
 
 - version 0.5.x onwards
 ``` typescript
@@ -124,8 +154,7 @@ export class MyPageModule {}
         (onEventSelected)="onEventSelected($event)"
         (onTitleChanged)="onViewTitleChanged($event)"
         (onTimeSelected)="onTimeSelected($event)"
-        [step]="calendar.step">
-        
+        [step]="calendar.step">        
     </calendar>
 ```
 
@@ -405,6 +434,25 @@ Options to pass to the underlying swiper instance. See https://swiperjs.com/swip
     };
 ```
 
+* `dayviewShowCategoryView` (version: 2.4+)    
+Determines if show dayview with category    
+Type: `boolean`    
+Default value: `false`    
+
+
+* `dayviewCategorySource` (version: 2.4+)    
+Determines the source the category names so that events with corresponding category will display accordingly. If events are not assigned with category, they will NOT be placed in the category view.    
+Type: `Set<string>`    
+Default value: `null`    
+``` html
+    <calendar ... [dayviewCategorySource]="calendar.dayviewCategorySource"></calendar>
+```
+``` typescript
+    calendar = {
+        dayviewCategorySource: new Set<string>(['Alice', 'Bob', 'Charlie'])
+    };
+```
+
 # Callback
 * onCurrentDateChanged    
 The callback function triggered when the date that is currently viewed changes.
@@ -510,6 +558,11 @@ Applied to the all day label in day view
 * calendar-hour-column  
 Applied to the hour column in both weekview and day view
 
+* dayview-category-header (version: 2.4+)  
+Applied to the category section in day view  
+
+* dayview-category-header-item (version: 2.4+)  
+Applied to the category header item in day view  
 
 ## Template Customization  
 
@@ -575,6 +628,16 @@ The template provides customized view for normal event in the weekview
     </ng-template>
 
     <calendar ... [weekviewNormalEventTemplate]="weekviewNormalEventTemplate"></calendar>
+```
+
+* dayviewCategoryItemTemplate (version: 2.4+)  
+The template provides customized view for category item with categoryId and categoryName in the day view  
+``` html
+    <ng-template #dayviewCategoryItemTemplate let-category="category">
+        {{ category.categoryName }}
+    </ng-template>
+
+    <calendar ... [dayviewCategoryItemTemplate]="dayviewCategoryItemTemplate"></calendar>
 ```
 
 * dayviewAllDayEventTemplate  
@@ -765,8 +828,11 @@ The template provides customized view for normal event section (table part) in t
 
 EventSource is an array of event object which contains at least below fields:
 
-* title
+* title    
+Type: `string`    
+
 * startTime    
+Type: `Date`    
 If allDay is set to true, the startTime has to be as a UTC date which time is set to 0:00 AM, because in an allDay event, only the date is considered, the exact time or timezone doesn't matter.    
 For example, if an allDay event starting from 2014-05-09, then startTime is
 
@@ -775,13 +841,19 @@ For example, if an allDay event starting from 2014-05-09, then startTime is
 ```
 
 * endTime    
+Type: `Date`    
 If allDay is set to true, the startTime has to be as a UTC date which time is set to 0:00 AM, because in an allDay event, only the date is considered, the exact time or timezone doesn't matter.    
 For example, if an allDay event ending to 2014-05-10, then endTime is
 ``` javascript
     var endTime = new Date(Date.UTC(2014, 4, 9));
 ```
 * allDay    
+Type: `boolean`    
 Indicates the event is allDay event or regular event
+
+* category (optional)    
+Type: `string`    
+Indicates which category the event belongs to. If the value is specified but not one of `dayviewCategorySource`, the event will not display in category view.
 
 **Note** The calendar only watches for the eventSource reference for performance consideration. That means only you manually reassign the eventSource value, the calendar gets notified, and this is usually fit to the scenario when the range is changed, you load a new data set from the backend. In case you want to manually insert/remove/update the element in the eventSource array, you can call [instance method](#instance-methods) ‘loadEvents’ event to notify the calendar manually.
 

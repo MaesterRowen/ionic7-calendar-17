@@ -1,9 +1,9 @@
 {
   "name": "ionic7-calendar-17",
-  "version": "1.0.3",
-  "description": "Ionic7 calendar component",
+  "version": "1.0.4",
+  "description": "Ionic calendar component",
   "keywords": [
-    "Ionic7",
+    "Ionic8",
     "calendar"
   ],
   "files": [
@@ -30,10 +30,11 @@
     "tslib": "^2.3.0"
   },
   "peerDependencies": {
-    "@angular/common": "^17.0.2 || ^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0",
-    "@angular/core": "^17.0.2 || ^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0",
-    "@ionic/angular": "^7.0.10 || ^8.0.0",
-    "swiper": "^8.4.6"
+    "@angular/common": "^20.0.0 || ^21.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@angular/forms": "^20.0.0 || ^21.0.0",
+    "@ionic/angular": "^8.0.0",
+    "swiper": "^12.0.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "21.2.27",
@@ -48,7 +49,7 @@
     "@ionic/angular": "8.8.19",
     "ng-packagr": "21.2.7",
     "rxjs": "7.8.2",
-    "swiper": "8.4.6",
+    "swiper": "12.2.0",
     "typescript": "5.9.3",
     "zone.js": "0.16.3"
   }

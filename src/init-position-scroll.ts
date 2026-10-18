@@ -14,7 +14,6 @@ import {
 
 @Component({
     selector: 'init-position-scroll',
-    standalone: false,
     template: `
         <div class="scroll-content" style="height:100%">
             <ng-content></ng-content>
@@ -26,7 +25,8 @@ import {
             overflow-x: hidden;
         }        
     `],
-    encapsulation: ViewEncapsulation.None
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class initPositionScrollComponent implements OnChanges, AfterViewInit, OnDestroy {
     @Input() initPosition!:number;

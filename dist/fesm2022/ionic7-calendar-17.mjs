@@ -4,10 +4,8 @@ import * as i2 from '@angular/common';
 import { DatePipe, CommonModule } from '@angular/common';
 import * as i2$1 from '@ionic/angular';
 import { IonicSlides, IonicModule } from '@ionic/angular';
+import SwiperCore, { Swiper } from 'swiper';
 import { Subject } from 'rxjs';
-import * as i3 from 'swiper/angular';
-import { SwiperModule } from 'swiper/angular';
-import SwiperCore from 'swiper';
 
 class CalendarService {
     constructor() {
@@ -152,6 +150,9 @@ class MonthViewComponent {
         this.zone = zone;
         this.autoSelect = true;
         this.dir = '';
+        this.lockSwipeToPrev = false;
+        this.lockSwipeToNext = false;
+        this.lockSwipes = false;
         this.onRangeChanged = new EventEmitter();
         this.onEventSelected = new EventEmitter();
         this.onTimeSelected = new EventEmitter();
@@ -162,7 +163,6 @@ class MonthViewComponent {
         this.direction = 0;
         this.moveOnSelected = false;
         this.inited = false;
-        this.callbackOnInit = true;
     }
     static getDates(startDate, n) {
         const dates = new Array(n), current = new Date(startDate.getTime());
@@ -178,6 +178,9 @@ class MonthViewComponent {
             this.sliderOptions = {};
         }
         this.sliderOptions.loop = true;
+        this.sliderOptions.allowSlidePrev = !this.lockSwipeToPrev;
+        this.sliderOptions.allowSlideNext = !this.lockSwipeToNext;
+        this.sliderOptions.allowTouchMove = !this.lockSwipes;
         if (this.dateFormatter && this.dateFormatter.formatMonthViewDay) {
             this.formatDayLabel = this.dateFormatter.formatMonthViewDay;
         }
@@ -215,14 +218,14 @@ class MonthViewComponent {
         });
         this.slideChangedSubscription = this.calendarService.slideChanged$.subscribe(direction => {
             if (direction === 1) {
-                this.slider.swiperRef.slideNext();
+                this.slider.slideNext();
             }
             else if (direction === -1) {
-                this.slider.swiperRef.slidePrev();
+                this.slider.slidePrev();
             }
         });
         this.slideUpdatedSubscription = this.calendarService.slideUpdated$.subscribe(() => {
-            this.slider.swiperRef.update();
+            this.slider.update();
         });
     }
     ngOnDestroy() {
@@ -253,54 +256,38 @@ class MonthViewComponent {
         }
         const lockSwipeToPrev = changes['lockSwipeToPrev'];
         if (lockSwipeToPrev) {
-            this.slider.swiperRef.allowSlidePrev = !lockSwipeToPrev.currentValue;
+            this.slider.allowSlidePrev = !lockSwipeToPrev.currentValue;
         }
         const lockSwipeToNext = changes['lockSwipeToNext'];
         if (lockSwipeToNext) {
-            this.slider.swiperRef.allowSlideNext = !lockSwipeToNext.currentValue;
+            this.slider.allowSlideNext = !lockSwipeToNext.currentValue;
         }
         const lockSwipes = changes['lockSwipes'];
         if (lockSwipes) {
-            this.slider.swiperRef.allowTouchMove = !lockSwipes.currentValue;
+            this.slider.allowTouchMove = !lockSwipes.currentValue;
         }
     }
     ngAfterViewInit() {
+        this.slider = new Swiper(this.swiperElement?.nativeElement, this.sliderOptions);
+        let me = this;
+        this.slider.on('slideNextTransitionEnd', function () {
+            me.onSlideChanged(1);
+        });
+        this.slider.on('slidePrevTransitionEnd', function () {
+            me.onSlideChanged(-1);
+        });
+        if (this.dir == 'rtl') {
+            this.slider.changeLanguageDirection('rtl');
+        }
         const title = this.getTitle();
         this.onTitleChanged.emit(title);
     }
     setSwiperInstance(swiper) {
         this.slider = swiper;
     }
-    onSlideChanged() {
-        this.zone.run(() => {
-            if (this.callbackOnInit) {
-                this.callbackOnInit = false;
-                return;
-            }
-            let direction = 0;
-            const currentViewIndex = this.currentViewIndex;
-            let currentSlideIndex = this.slider.swiperRef.activeIndex;
-            currentSlideIndex = (currentSlideIndex + 2) % 3;
-            if (isNaN(currentSlideIndex)) {
-                currentSlideIndex = currentViewIndex;
-            }
-            if (currentSlideIndex - currentViewIndex === 1) {
-                direction = 1;
-            }
-            else if (currentSlideIndex === 0 && currentViewIndex === 2) {
-                direction = 1;
-                this.slider.swiperRef.slideTo(1, 0, false);
-            }
-            else if (currentViewIndex - currentSlideIndex === 1) {
-                direction = -1;
-            }
-            else if (currentSlideIndex === 2 && currentViewIndex === 0) {
-                direction = -1;
-                this.slider.swiperRef.slideTo(3, 0, false);
-            }
-            this.currentViewIndex = currentSlideIndex;
-            this.move(direction);
-        });
+    onSlideChanged(direction) {
+        this.currentViewIndex = (this.currentViewIndex + direction + 3) % 3;
+        this.move(direction);
     }
     move(direction) {
         if (direction === 0) {
@@ -530,10 +517,10 @@ class MonthViewComponent {
     }
     slideView(direction) {
         if (direction === 1) {
-            this.slider.swiperRef.slideNext();
+            this.slider.slideNext();
         }
         else if (direction === -1) {
-            this.slider.swiperRef.slidePrev();
+            this.slider.slidePrev();
         }
     }
     updateCurrentView(currentViewStartDate, view) {
@@ -556,264 +543,14 @@ class MonthViewComponent {
         this.onEventSelected.emit(event);
     }
     static { this.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: MonthViewComponent, deps: [{ token: CalendarService }, { token: i0.NgZone }], target: i0.ɵɵFactoryTarget.Component }); }
-    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: MonthViewComponent, isStandalone: false, selector: "monthview", inputs: { monthviewDisplayEventTemplate: "monthviewDisplayEventTemplate", monthviewInactiveDisplayEventTemplate: "monthviewInactiveDisplayEventTemplate", monthviewEventDetailTemplate: "monthviewEventDetailTemplate", formatDay: "formatDay", formatDayHeader: "formatDayHeader", formatMonthTitle: "formatMonthTitle", eventSource: "eventSource", startingDayMonth: "startingDayMonth", showEventDetail: "showEventDetail", noEventsLabel: "noEventsLabel", autoSelect: "autoSelect", markDisabled: "markDisabled", locale: "locale", dateFormatter: "dateFormatter", dir: "dir", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", sliderOptions: "sliderOptions" }, outputs: { onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onTitleChanged: "onTitleChanged" }, viewQueries: [{ propertyName: "slider", first: true, predicate: ["swiper"], descendants: true }], usesOnChanges: true, ngImport: i0, template: `
-        <div>
-            <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()">
-                <ng-template swiperSlide>
-                    <table *ngIf="0===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[0].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[0].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[0].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[0], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="0!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[0].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[0], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-                <ng-template swiperSlide>
-                    <table *ngIf="1===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[1].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[1].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[1].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[1], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="1!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[1].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[1], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-                <ng-template swiperSlide>
-                    <table *ngIf="2===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[2].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[2].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[2].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[2], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="2!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[2].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[2], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-            </swiper>
-            <ng-template [ngTemplateOutlet]="monthviewEventDetailTemplate"
-                         [ngTemplateOutletContext]="{showEventDetail:showEventDetail, selectedDate: selectedDate, noEventsLabel: noEventsLabel}">
-            </ng-template>
-        </div>
-    `, isInline: true, styles: [".text-muted{color:#999}.table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.monthview-primary-with-event{background-color:#3a87ad;color:#fff}.monthview-current{background-color:#f0f0f0}.monthview-selected{background-color:#090;color:#fff}.monthview-datetable td.monthview-disabled{color:#d3d3d3;cursor:default}.monthview-datetable th{text-align:center}.monthview-datetable td{cursor:pointer;text-align:center}.monthview-secondary-with-event{background-color:#d9edf7}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}\n"], dependencies: [{ kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: i3.SwiperComponent, selector: "swiper, [swiper]", inputs: ["enabled", "on", "direction", "touchEventsTarget", "initialSlide", "speed", "cssMode", "updateOnWindowResize", "resizeObserver", "nested", "focusableElements", "width", "height", "preventInteractionOnTransition", "userAgent", "url", "edgeSwipeDetection", "edgeSwipeThreshold", "freeMode", "autoHeight", "setWrapperSize", "virtualTranslate", "effect", "breakpoints", "spaceBetween", "slidesPerView", "maxBackfaceHiddenSlides", "grid", "slidesPerGroup", "slidesPerGroupSkip", "centeredSlides", "centeredSlidesBounds", "slidesOffsetBefore", "slidesOffsetAfter", "normalizeSlideIndex", "centerInsufficientSlides", "watchOverflow", "roundLengths", "touchRatio", "touchAngle", "simulateTouch", "shortSwipes", "longSwipes", "longSwipesRatio", "longSwipesMs", "followFinger", "allowTouchMove", "threshold", "touchMoveStopPropagation", "touchStartPreventDefault", "touchStartForcePreventDefault", "touchReleaseOnEdges", "uniqueNavElements", "resistance", "resistanceRatio", "watchSlidesProgress", "grabCursor", "preventClicks", "preventClicksPropagation", "slideToClickedSlide", "preloadImages", "updateOnImagesReady", "loop", "loopAdditionalSlides", "loopedSlides", "loopedSlidesLimit", "loopFillGroupWithBlank", "loopPreventsSlide", "rewind", "allowSlidePrev", "allowSlideNext", "swipeHandler", "noSwiping", "noSwipingClass", "noSwipingSelector", "passiveListeners", "containerModifierClass", "slideClass", "slideBlankClass", "slideActiveClass", "slideDuplicateActiveClass", "slideVisibleClass", "slideDuplicateClass", "slideNextClass", "slideDuplicateNextClass", "slidePrevClass", "slideDuplicatePrevClass", "wrapperClass", "runCallbacksOnInit", "observeParents", "observeSlideChildren", "a11y", "autoplay", "controller", "coverflowEffect", "cubeEffect", "fadeEffect", "flipEffect", "creativeEffect", "cardsEffect", "hashNavigation", "history", "keyboard", "lazy", "mousewheel", "parallax", "thumbs", "zoom", "slidesPerGroupAuto", "class", "id", "navigation", "pagination", "scrollbar", "virtual", "config"], outputs: ["_beforeBreakpoint", "_containerClasses", "_slideClass", "_swiper", "activeIndexChange", "afterInit", "autoplay", "autoplayStart", "autoplayStop", "autoplayPause", "autoplayResume", "beforeDestroy", "beforeInit", "beforeLoopFix", "beforeResize", "beforeSlideChangeStart", "beforeTransitionStart", "breakpoint", "changeDirection", "click", "doubleTap", "doubleClick", "destroy", "fromEdge", "hashChange", "hashSet", "imagesReady", "init", "keyPress", "lazyImageLoad", "lazyImageReady", "loopFix", "momentumBounce", "navigationHide", "navigationShow", "navigationPrev", "navigationNext", "observerUpdate", "orientationchange", "paginationHide", "paginationRender", "paginationShow", "paginationUpdate", "progress", "reachBeginning", "reachEnd", "realIndexChange", "resize", "scroll", "scrollbarDragEnd", "scrollbarDragMove", "scrollbarDragStart", "setTransition", "setTranslate", "slideChange", "slideChangeTransitionEnd", "slideChangeTransitionStart", "slideNextTransitionEnd", "slideNextTransitionStart", "slidePrevTransitionEnd", "slidePrevTransitionStart", "slideResetTransitionStart", "slideResetTransitionEnd", "sliderMove", "sliderFirstMove", "slidesLengthChange", "slidesGridLengthChange", "snapGridLengthChange", "snapIndexChange", "tap", "toEdge", "touchEnd", "touchMove", "touchMoveOpposite", "touchStart", "transitionEnd", "transitionStart", "update", "zoomChange", "swiper", "lock", "unlock"] }, { kind: "directive", type: i3.SwiperSlideDirective, selector: "ng-template[swiperSlide]", inputs: ["virtualIndex", "class", "ngClass", "data-swiper-autoplay", "zoom"] }] }); }
+    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: MonthViewComponent, isStandalone: false, selector: "monthview", inputs: { monthviewDisplayEventTemplate: "monthviewDisplayEventTemplate", monthviewInactiveDisplayEventTemplate: "monthviewInactiveDisplayEventTemplate", monthviewEventDetailTemplate: "monthviewEventDetailTemplate", formatDay: "formatDay", formatDayHeader: "formatDayHeader", formatMonthTitle: "formatMonthTitle", eventSource: "eventSource", startingDayMonth: "startingDayMonth", showEventDetail: "showEventDetail", noEventsLabel: "noEventsLabel", autoSelect: "autoSelect", markDisabled: "markDisabled", locale: "locale", dateFormatter: "dateFormatter", dir: "dir", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", sliderOptions: "sliderOptions" }, outputs: { onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onTitleChanged: "onTitleChanged" }, viewQueries: [{ propertyName: "swiperElement", first: true, predicate: ["monthViewSwiper"], descendants: true }], usesOnChanges: true, ngImport: i0, template: "<div class=\"swiper monthview-swiper\" #monthViewSwiper>\r\n    <div class=\"swiper-wrapper\">\r\n        <div class=\"swiper-slide\">\r\n            <table *ngIf=\"0===currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr>\r\n                        <th *ngFor=\"let dayHeader of views[0].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\" tappable (click)=\"select(views[0].dates[row*7+col])\"\r\n                            [ngClass]=\"getHighlightClass(views[0].dates[row*7+col])\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[0], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    </tr>\r\n                </tbody>\r\n            </table>\r\n            <table *ngIf=\"0!==currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr class=\"text-center\">\r\n                        <th *ngFor=\"let dayHeader of views[0].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewInactiveDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[0], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    <tr>\r\n                </tbody>\r\n            </table>\r\n        </div>\r\n        <div class=\"swiper-slide\">\r\n            <table *ngIf=\"1===currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr>\r\n                        <th *ngFor=\"let dayHeader of views[1].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\" tappable (click)=\"select(views[1].dates[row*7+col])\"\r\n                            [ngClass]=\"getHighlightClass(views[1].dates[row*7+col])\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[1], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    </tr>\r\n                </tbody>\r\n            </table>\r\n            <table *ngIf=\"1!==currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr class=\"text-center\">\r\n                        <th *ngFor=\"let dayHeader of views[1].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewInactiveDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[1], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    <tr>\r\n                </tbody>\r\n            </table>\r\n        </div>\r\n        <div class=\"swiper-slide\">\r\n            <table *ngIf=\"2===currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr>\r\n                        <th *ngFor=\"let dayHeader of views[2].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\" tappable (click)=\"select(views[2].dates[row*7+col])\"\r\n                            [ngClass]=\"getHighlightClass(views[2].dates[row*7+col])\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[2], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    </tr>\r\n                </tbody>\r\n            </table>\r\n            <table *ngIf=\"2!==currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr class=\"text-center\">\r\n                        <th *ngFor=\"let dayHeader of views[2].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewInactiveDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[2], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    <tr>\r\n                </tbody>\r\n            </table>\r\n        </div>\r\n    </div>\r\n    <ng-template [ngTemplateOutlet]=\"monthviewEventDetailTemplate\"\r\n        [ngTemplateOutletContext]=\"{showEventDetail:showEventDetail, selectedDate: selectedDate, noEventsLabel: noEventsLabel}\">\r\n    </ng-template>\r\n</div>", styles: [".text-muted{color:#999}.table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.monthview-primary-with-event{background-color:#3a87ad;color:#fff}.monthview-current{background-color:#f0f0f0}.monthview-selected{background-color:#090;color:#fff}.monthview-datetable td.monthview-disabled{color:#d3d3d3;cursor:default}.monthview-datetable th{text-align:center}.monthview-datetable td{cursor:pointer;text-align:center}.monthview-secondary-with-event{background-color:#d9edf7}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}\n"], dependencies: [{ kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }] }); }
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: MonthViewComponent, decorators: [{
             type: Component,
-            args: [{ selector: 'monthview', standalone: false, template: `
-        <div>
-            <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()">
-                <ng-template swiperSlide>
-                    <table *ngIf="0===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[0].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[0].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[0].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[0], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="0!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[0].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[0], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-                <ng-template swiperSlide>
-                    <table *ngIf="1===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[1].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[1].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[1].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[1], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="1!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[1].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[1], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-                <ng-template swiperSlide>
-                    <table *ngIf="2===currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr>
-                            <th *ngFor="let dayHeader of views[2].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]" tappable (click)="select(views[2].dates[row*7+col])"
-                                [ngClass]="getHighlightClass(views[2].dates[row*7+col])">
-                                <ng-template [ngTemplateOutlet]="monthviewDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[2], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table *ngIf="2!==currentViewIndex" class="table table-bordered table-fixed monthview-datetable">
-                        <thead>
-                        <tr class="text-center">
-                            <th *ngFor="let dayHeader of views[2].dayHeaders">
-                                <small>{{dayHeader}}</small>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr *ngFor="let row of [0,1,2,3,4,5]">
-                            <td *ngFor="let col of [0,1,2,3,4,5,6]">
-                                <ng-template [ngTemplateOutlet]="monthviewInactiveDisplayEventTemplate"
-                                             [ngTemplateOutletContext]="{view: views[2], row: row, col: col}">
-                                </ng-template>
-                            </td>
-                        <tr>
-                        </tbody>
-                    </table>
-                </ng-template>
-            </swiper>
-            <ng-template [ngTemplateOutlet]="monthviewEventDetailTemplate"
-                         [ngTemplateOutletContext]="{showEventDetail:showEventDetail, selectedDate: selectedDate, noEventsLabel: noEventsLabel}">
-            </ng-template>
-        </div>
-    `, styles: [".text-muted{color:#999}.table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.monthview-primary-with-event{background-color:#3a87ad;color:#fff}.monthview-current{background-color:#f0f0f0}.monthview-selected{background-color:#090;color:#fff}.monthview-datetable td.monthview-disabled{color:#d3d3d3;cursor:default}.monthview-datetable th{text-align:center}.monthview-datetable td{cursor:pointer;text-align:center}.monthview-secondary-with-event{background-color:#d9edf7}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}\n"] }]
-        }], ctorParameters: () => [{ type: CalendarService }, { type: i0.NgZone }], propDecorators: { slider: [{
+            args: [{ selector: 'monthview', standalone: false, template: "<div class=\"swiper monthview-swiper\" #monthViewSwiper>\r\n    <div class=\"swiper-wrapper\">\r\n        <div class=\"swiper-slide\">\r\n            <table *ngIf=\"0===currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr>\r\n                        <th *ngFor=\"let dayHeader of views[0].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\" tappable (click)=\"select(views[0].dates[row*7+col])\"\r\n                            [ngClass]=\"getHighlightClass(views[0].dates[row*7+col])\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[0], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    </tr>\r\n                </tbody>\r\n            </table>\r\n            <table *ngIf=\"0!==currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr class=\"text-center\">\r\n                        <th *ngFor=\"let dayHeader of views[0].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewInactiveDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[0], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    <tr>\r\n                </tbody>\r\n            </table>\r\n        </div>\r\n        <div class=\"swiper-slide\">\r\n            <table *ngIf=\"1===currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr>\r\n                        <th *ngFor=\"let dayHeader of views[1].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\" tappable (click)=\"select(views[1].dates[row*7+col])\"\r\n                            [ngClass]=\"getHighlightClass(views[1].dates[row*7+col])\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[1], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    </tr>\r\n                </tbody>\r\n            </table>\r\n            <table *ngIf=\"1!==currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr class=\"text-center\">\r\n                        <th *ngFor=\"let dayHeader of views[1].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewInactiveDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[1], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    <tr>\r\n                </tbody>\r\n            </table>\r\n        </div>\r\n        <div class=\"swiper-slide\">\r\n            <table *ngIf=\"2===currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr>\r\n                        <th *ngFor=\"let dayHeader of views[2].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\" tappable (click)=\"select(views[2].dates[row*7+col])\"\r\n                            [ngClass]=\"getHighlightClass(views[2].dates[row*7+col])\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[2], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    </tr>\r\n                </tbody>\r\n            </table>\r\n            <table *ngIf=\"2!==currentViewIndex\" class=\"table table-bordered table-fixed monthview-datetable\">\r\n                <thead>\r\n                    <tr class=\"text-center\">\r\n                        <th *ngFor=\"let dayHeader of views[2].dayHeaders\">\r\n                            <small>{{dayHeader}}</small>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n                <tbody>\r\n                    <tr *ngFor=\"let row of [0,1,2,3,4,5]\">\r\n                        <td *ngFor=\"let col of [0,1,2,3,4,5,6]\">\r\n                            <ng-template [ngTemplateOutlet]=\"monthviewInactiveDisplayEventTemplate\"\r\n                                [ngTemplateOutletContext]=\"{view: views[2], row: row, col: col}\">\r\n                            </ng-template>\r\n                        </td>\r\n                    <tr>\r\n                </tbody>\r\n            </table>\r\n        </div>\r\n    </div>\r\n    <ng-template [ngTemplateOutlet]=\"monthviewEventDetailTemplate\"\r\n        [ngTemplateOutletContext]=\"{showEventDetail:showEventDetail, selectedDate: selectedDate, noEventsLabel: noEventsLabel}\">\r\n    </ng-template>\r\n</div>", styles: [".text-muted{color:#999}.table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.monthview-primary-with-event{background-color:#3a87ad;color:#fff}.monthview-current{background-color:#f0f0f0}.monthview-selected{background-color:#090;color:#fff}.monthview-datetable td.monthview-disabled{color:#d3d3d3;cursor:default}.monthview-datetable th{text-align:center}.monthview-datetable td{cursor:pointer;text-align:center}.monthview-secondary-with-event{background-color:#d9edf7}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}\n"] }]
+        }], ctorParameters: () => [{ type: CalendarService }, { type: i0.NgZone }], propDecorators: { swiperElement: [{
                 type: ViewChild,
-                args: ['swiper', { static: false }]
+                args: ['monthViewSwiper']
             }], monthviewDisplayEventTemplate: [{
                 type: Input
             }], monthviewInactiveDisplayEventTemplate: [{
@@ -910,11 +647,11 @@ class initPositionScrollComponent {
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: initPositionScrollComponent, decorators: [{
             type: Component,
-            args: [{ selector: 'init-position-scroll', standalone: false, template: `
+            args: [{ selector: 'init-position-scroll', template: `
         <div class="scroll-content" style="height:100%">
             <ng-content></ng-content>
         </div>
-    `, encapsulation: ViewEncapsulation.None, styles: [".scroll-content{overflow-y:auto;overflow-x:hidden}\n"] }]
+    `, encapsulation: ViewEncapsulation.None, standalone: false, styles: [".scroll-content{overflow-y:auto;overflow-x:hidden}\n"] }]
         }], ctorParameters: () => [{ type: i0.ElementRef }, { type: i0.NgZone }], propDecorators: { initPosition: [{
                 type: Input
             }], emitEvent: [{
@@ -937,12 +674,12 @@ class WeekViewComponent {
         this.onTimeSelected = new EventEmitter();
         this.onDayHeaderSelected = new EventEmitter();
         this.onTitleChanged = new EventEmitter();
+        this.sliderIndexList = [0, 1, 2];
         this.views = [];
         this.currentViewIndex = 0;
         this.direction = 0;
         this.mode = 'week';
         this.inited = false;
-        this.callbackOnInit = true;
     }
     static createDateObjects(startTime, startHour, endHour, timeInterval) {
         const times = [], currentHour = 0, currentDate = startTime.getDate();
@@ -1044,6 +781,9 @@ class WeekViewComponent {
             this.sliderOptions = {};
         }
         this.sliderOptions.loop = true;
+        this.sliderOptions.allowSlidePrev = !this.lockSwipeToPrev;
+        this.sliderOptions.allowSlideNext = !this.lockSwipeToNext;
+        this.sliderOptions.allowTouchMove = !this.lockSwipes;
         this.hourRange = (this.endHour - this.startHour) * this.hourSegments;
         if (this.dateFormatter && this.dateFormatter.formatWeekViewDayHeader) {
             this.formatDayHeader = this.dateFormatter.formatWeekViewDayHeader;
@@ -1083,17 +823,28 @@ class WeekViewComponent {
         });
         this.slideChangedSubscription = this.calendarService.slideChanged$.subscribe(direction => {
             if (direction === 1) {
-                this.slider.swiperRef.slideNext();
+                this.slider.slideNext();
             }
             else if (direction === -1) {
-                this.slider.swiperRef.slidePrev();
+                this.slider.slidePrev();
             }
         });
         this.slideUpdatedSubscription = this.calendarService.slideUpdated$.subscribe(() => {
-            this.slider.swiperRef.update();
+            this.slider.update();
         });
     }
     ngAfterViewInit() {
+        this.slider = new Swiper(this.swiperElement?.nativeElement, this.sliderOptions);
+        let me = this;
+        this.slider.on('slideNextTransitionEnd', function () {
+            me.onSlideChanged(1);
+        });
+        this.slider.on('slidePrevTransitionEnd', function () {
+            me.onSlideChanged(-1);
+        });
+        if (this.dir === 'rtl') {
+            this.slider.changeLanguageDirection('rtl');
+        }
         const title = this.getTitle();
         this.onTitleChanged.emit(title);
         if (this.scrollToHour > 0) {
@@ -1121,15 +872,15 @@ class WeekViewComponent {
         }
         const lockSwipeToPrev = changes['lockSwipeToPrev'];
         if (lockSwipeToPrev) {
-            this.slider.swiperRef.allowSlidePrev = !lockSwipeToPrev.currentValue;
+            this.slider.allowSlidePrev = !lockSwipeToPrev.currentValue;
         }
         const lockSwipeToNext = changes['lockSwipeToNext'];
         if (lockSwipeToPrev) {
-            this.slider.swiperRef.allowSlideNext = !lockSwipeToNext.currentValue;
+            this.slider.allowSlideNext = !lockSwipeToNext.currentValue;
         }
         const lockSwipes = changes['lockSwipes'];
         if (lockSwipes) {
-            this.slider.swiperRef.allowTouchMove = !lockSwipes.currentValue;
+            this.slider.allowTouchMove = !lockSwipes.currentValue;
         }
     }
     ngOnDestroy() {
@@ -1150,36 +901,9 @@ class WeekViewComponent {
             this.slideUpdatedSubscription = undefined;
         }
     }
-    onSlideChanged() {
-        this.zone.run(() => {
-            if (this.callbackOnInit) {
-                this.callbackOnInit = false;
-                return;
-            }
-            const currentViewIndex = this.currentViewIndex;
-            let direction = 0;
-            let currentSlideIndex = this.slider.swiperRef.activeIndex;
-            currentSlideIndex = (currentSlideIndex + 2) % 3;
-            if (isNaN(currentSlideIndex)) {
-                currentSlideIndex = currentViewIndex;
-            }
-            if (currentSlideIndex - currentViewIndex === 1) {
-                direction = 1;
-            }
-            else if (currentSlideIndex === 0 && currentViewIndex === 2) {
-                direction = 1;
-                this.slider.swiperRef.slideTo(1, 0, false);
-            }
-            else if (currentViewIndex - currentSlideIndex === 1) {
-                direction = -1;
-            }
-            else if (currentSlideIndex === 2 && currentViewIndex === 0) {
-                direction = -1;
-                this.slider.swiperRef.slideTo(3, 0, false);
-            }
-            this.currentViewIndex = currentSlideIndex;
-            this.move(direction);
-        });
+    onSlideChanged(direction) {
+        this.currentViewIndex = (this.currentViewIndex + direction + 3) % 3;
+        this.move(direction);
     }
     move(direction) {
         if (direction === 0) {
@@ -1555,557 +1279,17 @@ class WeekViewComponent {
         this.initScrollPosition = scrollPosition;
     }
     static { this.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: WeekViewComponent, deps: [{ token: CalendarService }, { token: i0.ElementRef }, { token: i0.NgZone }], target: i0.ɵɵFactoryTarget.Component }); }
-    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: WeekViewComponent, isStandalone: false, selector: "weekview", inputs: { weekviewHeaderTemplate: "weekviewHeaderTemplate", weekviewAllDayEventTemplate: "weekviewAllDayEventTemplate", weekviewNormalEventTemplate: "weekviewNormalEventTemplate", weekviewAllDayEventSectionTemplate: "weekviewAllDayEventSectionTemplate", weekviewNormalEventSectionTemplate: "weekviewNormalEventSectionTemplate", weekviewInactiveAllDayEventSectionTemplate: "weekviewInactiveAllDayEventSectionTemplate", weekviewInactiveNormalEventSectionTemplate: "weekviewInactiveNormalEventSectionTemplate", formatWeekTitle: "formatWeekTitle", formatWeekViewDayHeader: "formatWeekViewDayHeader", formatHourColumn: "formatHourColumn", startingDayWeek: "startingDayWeek", allDayLabel: "allDayLabel", hourParts: "hourParts", eventSource: "eventSource", autoSelect: "autoSelect", markDisabled: "markDisabled", locale: "locale", dateFormatter: "dateFormatter", dir: "dir", scrollToHour: "scrollToHour", preserveScrollPosition: "preserveScrollPosition", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", startHour: "startHour", endHour: "endHour", sliderOptions: "sliderOptions", hourSegments: "hourSegments" }, outputs: { onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onDayHeaderSelected: "onDayHeaderSelected", onTitleChanged: "onTitleChanged" }, host: { properties: { "class.weekview": "this.class" } }, viewQueries: [{ propertyName: "slider", first: true, predicate: ["swiper"], descendants: true }], usesOnChanges: true, ngImport: i0, template: `
-        <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()"
-                    class="slides-container">
-            <ng-template swiperSlide class="slide-container">
-                <table class="table table-bordered table-fixed weekview-header">
-                    <thead>
-                    <tr>
-                        <th class="calendar-hour-column"></th>
-                        <th class="weekview-header text-center" *ngFor="let date of views[0].dates"
-                            [ngClass]="getHighlightClass(date)"
-                            (click)="daySelected(date)">
-                            <ng-template [ngTemplateOutlet]="weekviewHeaderTemplate"
-                                         [ngTemplateOutletContext]="{viewDate:date}">
-                            </ng-template>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-                <div *ngIf="0===currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[0].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day, eventTemplate:weekviewAllDayEventTemplate}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition"
-                                          [emitEvent]="preserveScrollPosition" (onScroll)="setScrollPosition($event)">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[0].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell" tappable
-                                    (click)="select(tm.time, tm.events)">
-                                    <ng-template [ngTemplateOutlet]="weekviewNormalEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-                <div *ngIf="0!==currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[0].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[0].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell">
-                                    <ng-template [ngTemplateOutlet]="weekviewInactiveNormalEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <table class="table table-bordered table-fixed weekview-header">
-                    <thead>
-                    <tr>
-                        <th class="calendar-hour-column"></th>
-                        <th class="weekview-header text-center" *ngFor="let date of views[1].dates"
-                            [ngClass]="getHighlightClass(date)"
-                            (click)="daySelected(date)">
-                            <ng-template [ngTemplateOutlet]="weekviewHeaderTemplate"
-                                         [ngTemplateOutletContext]="{viewDate:date}">
-                            </ng-template>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-                <div *ngIf="1===currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[1].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day, eventTemplate:weekviewAllDayEventTemplate}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition"
-                                          [emitEvent]="preserveScrollPosition" (onScroll)="setScrollPosition($event)">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[1].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell" tappable
-                                    (click)="select(tm.time, tm.events)">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-                <div *ngIf="1!==currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[1].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[1].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <table class="table table-bordered table-fixed weekview-header">
-                    <thead>
-                    <tr>
-                        <th class="calendar-hour-column"></th>
-                        <th class="weekview-header text-center" *ngFor="let date of views[2].dates"
-                            [ngClass]="getHighlightClass(date)"
-                            (click)="daySelected(date)">
-                            <ng-template [ngTemplateOutlet]="weekviewHeaderTemplate"
-                                         [ngTemplateOutletContext]="{viewDate:date}">
-                            </ng-template>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-                <div *ngIf="2===currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[2].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day, eventTemplate:weekviewAllDayEventTemplate}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition"
-                                          [emitEvent]="preserveScrollPosition" (onScroll)="setScrollPosition($event)">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[2].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell" tappable
-                                    (click)="select(tm.time, tm.events)">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-                <div *ngIf="2!==currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[2].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[2].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-            </ng-template>
-        </swiper>
-    `, isInline: true, styles: [".table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.calendar-cell{padding:0!important;height:37px}.slides-container{height:100%}.slide-container{display:block!important}.weekview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-left:1px solid #ddd}[dir=rtl] .weekview-allday-label{float:right;border-right:1px solid #ddd}.weekview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:50px}.weekview-allday-content-table{min-height:50px}.weekview-allday-content-table td{border-left:1px solid #ddd;border-right:1px solid #ddd}.weekview-header th{overflow:hidden;white-space:nowrap;font-size:14px}.weekview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.weekview-normal-event-container{margin-top:87px;overflow:hidden;inset:0;position:absolute;font-size:14px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.weekview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.weekview-allday-label{padding-top:4px}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.table>thead>tr>th.weekview-header{padding-left:0;padding-right:0;font-size:12px}.weekview-allday-label{line-height:20px}.weekview-allday-content-wrapper{margin-left:31px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"], dependencies: [{ kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: i3.SwiperComponent, selector: "swiper, [swiper]", inputs: ["enabled", "on", "direction", "touchEventsTarget", "initialSlide", "speed", "cssMode", "updateOnWindowResize", "resizeObserver", "nested", "focusableElements", "width", "height", "preventInteractionOnTransition", "userAgent", "url", "edgeSwipeDetection", "edgeSwipeThreshold", "freeMode", "autoHeight", "setWrapperSize", "virtualTranslate", "effect", "breakpoints", "spaceBetween", "slidesPerView", "maxBackfaceHiddenSlides", "grid", "slidesPerGroup", "slidesPerGroupSkip", "centeredSlides", "centeredSlidesBounds", "slidesOffsetBefore", "slidesOffsetAfter", "normalizeSlideIndex", "centerInsufficientSlides", "watchOverflow", "roundLengths", "touchRatio", "touchAngle", "simulateTouch", "shortSwipes", "longSwipes", "longSwipesRatio", "longSwipesMs", "followFinger", "allowTouchMove", "threshold", "touchMoveStopPropagation", "touchStartPreventDefault", "touchStartForcePreventDefault", "touchReleaseOnEdges", "uniqueNavElements", "resistance", "resistanceRatio", "watchSlidesProgress", "grabCursor", "preventClicks", "preventClicksPropagation", "slideToClickedSlide", "preloadImages", "updateOnImagesReady", "loop", "loopAdditionalSlides", "loopedSlides", "loopedSlidesLimit", "loopFillGroupWithBlank", "loopPreventsSlide", "rewind", "allowSlidePrev", "allowSlideNext", "swipeHandler", "noSwiping", "noSwipingClass", "noSwipingSelector", "passiveListeners", "containerModifierClass", "slideClass", "slideBlankClass", "slideActiveClass", "slideDuplicateActiveClass", "slideVisibleClass", "slideDuplicateClass", "slideNextClass", "slideDuplicateNextClass", "slidePrevClass", "slideDuplicatePrevClass", "wrapperClass", "runCallbacksOnInit", "observeParents", "observeSlideChildren", "a11y", "autoplay", "controller", "coverflowEffect", "cubeEffect", "fadeEffect", "flipEffect", "creativeEffect", "cardsEffect", "hashNavigation", "history", "keyboard", "lazy", "mousewheel", "parallax", "thumbs", "zoom", "slidesPerGroupAuto", "class", "id", "navigation", "pagination", "scrollbar", "virtual", "config"], outputs: ["_beforeBreakpoint", "_containerClasses", "_slideClass", "_swiper", "activeIndexChange", "afterInit", "autoplay", "autoplayStart", "autoplayStop", "autoplayPause", "autoplayResume", "beforeDestroy", "beforeInit", "beforeLoopFix", "beforeResize", "beforeSlideChangeStart", "beforeTransitionStart", "breakpoint", "changeDirection", "click", "doubleTap", "doubleClick", "destroy", "fromEdge", "hashChange", "hashSet", "imagesReady", "init", "keyPress", "lazyImageLoad", "lazyImageReady", "loopFix", "momentumBounce", "navigationHide", "navigationShow", "navigationPrev", "navigationNext", "observerUpdate", "orientationchange", "paginationHide", "paginationRender", "paginationShow", "paginationUpdate", "progress", "reachBeginning", "reachEnd", "realIndexChange", "resize", "scroll", "scrollbarDragEnd", "scrollbarDragMove", "scrollbarDragStart", "setTransition", "setTranslate", "slideChange", "slideChangeTransitionEnd", "slideChangeTransitionStart", "slideNextTransitionEnd", "slideNextTransitionStart", "slidePrevTransitionEnd", "slidePrevTransitionStart", "slideResetTransitionStart", "slideResetTransitionEnd", "sliderMove", "sliderFirstMove", "slidesLengthChange", "slidesGridLengthChange", "snapGridLengthChange", "snapIndexChange", "tap", "toEdge", "touchEnd", "touchMove", "touchMoveOpposite", "touchStart", "transitionEnd", "transitionStart", "update", "zoomChange", "swiper", "lock", "unlock"] }, { kind: "directive", type: i3.SwiperSlideDirective, selector: "ng-template[swiperSlide]", inputs: ["virtualIndex", "class", "ngClass", "data-swiper-autoplay", "zoom"] }, { kind: "component", type: initPositionScrollComponent, selector: "init-position-scroll", inputs: ["initPosition", "emitEvent"], outputs: ["onScroll"] }], encapsulation: i0.ViewEncapsulation.None }); }
+    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: WeekViewComponent, isStandalone: false, selector: "weekview", inputs: { weekviewHeaderTemplate: "weekviewHeaderTemplate", weekviewAllDayEventTemplate: "weekviewAllDayEventTemplate", weekviewNormalEventTemplate: "weekviewNormalEventTemplate", weekviewAllDayEventSectionTemplate: "weekviewAllDayEventSectionTemplate", weekviewNormalEventSectionTemplate: "weekviewNormalEventSectionTemplate", weekviewInactiveAllDayEventSectionTemplate: "weekviewInactiveAllDayEventSectionTemplate", weekviewInactiveNormalEventSectionTemplate: "weekviewInactiveNormalEventSectionTemplate", formatWeekTitle: "formatWeekTitle", formatWeekViewDayHeader: "formatWeekViewDayHeader", formatHourColumn: "formatHourColumn", startingDayWeek: "startingDayWeek", allDayLabel: "allDayLabel", hourParts: "hourParts", eventSource: "eventSource", autoSelect: "autoSelect", markDisabled: "markDisabled", locale: "locale", dateFormatter: "dateFormatter", dir: "dir", scrollToHour: "scrollToHour", preserveScrollPosition: "preserveScrollPosition", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", startHour: "startHour", endHour: "endHour", sliderOptions: "sliderOptions", hourSegments: "hourSegments" }, outputs: { onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onDayHeaderSelected: "onDayHeaderSelected", onTitleChanged: "onTitleChanged" }, host: { properties: { "class.weekview": "this.class" } }, viewQueries: [{ propertyName: "swiperElement", first: true, predicate: ["weekViewSwiper"], descendants: true }], usesOnChanges: true, ngImport: i0, template: "<div class=\"swiper weekview-swiper\" #weekViewSwiper>\r\n    <div class=\"swiper-wrapper slides-container\" [dir]=\"dir\">\r\n        <div *ngFor=\"let sliderIndex of sliderIndexList\" class=\"swiper-slide slide-container weekview-slide-container\">\r\n            <table class=\"table table-bordered table-fixed weekview-header\">\r\n                <thead>\r\n                    <tr>\r\n                        <th class=\"calendar-hour-column\"></th>\r\n                        <th class=\"weekview-header text-center\" *ngFor=\"let date of views[sliderIndex].dates\"\r\n                            [ngClass]=\"getHighlightClass(date)\" (click)=\"daySelected(date)\">\r\n                            <ng-template [ngTemplateOutlet]=\"weekviewHeaderTemplate\"\r\n                                [ngTemplateOutletContext]=\"{viewDate:date}\">\r\n                            </ng-template>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n            </table>\r\n            <div *ngIf=\"sliderIndex===currentViewIndex\">\r\n                <div class=\"weekview-allday-table\">\r\n                    <div class=\"weekview-allday-label\">{{allDayLabel}}</div>\r\n                    <div class=\"weekview-allday-content-wrapper scroll-content\">\r\n                        <table class=\"table table-fixed weekview-allday-content-table\">\r\n                            <tbody>\r\n                                <tr>\r\n                                    <td *ngFor=\"let day of views[sliderIndex].dates\" class=\"calendar-cell\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewAllDayEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{day:day, eventTemplate:weekviewAllDayEventTemplate}\">\r\n                                        </ng-template>\r\n                                    </td>\r\n                                </tr>\r\n                            </tbody>\r\n                        </table>\r\n                    </div>\r\n                </div>\r\n                <init-position-scroll class=\"weekview-normal-event-container\" [initPosition]=\"initScrollPosition\"\r\n                    [emitEvent]=\"preserveScrollPosition\" (onScroll)=\"setScrollPosition($event)\">\r\n                    <table class=\"table table-bordered table-fixed weekview-normal-event-table\">\r\n                        <tbody>\r\n                            <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                                <td class=\"calendar-hour-column text-center\">\r\n                                    {{hourColumnLabels[i]}}\r\n                                </td>\r\n                                <td *ngFor=\"let tm of row\" class=\"calendar-cell\" tappable\r\n                                    (click)=\"select(tm.time, tm.events)\">\r\n                                    <div [ngClass]=\"{'calendar-event-wrap': tm.events}\" *ngIf=\"tm.events\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewNormalEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}\">\r\n                                        </ng-template>\r\n                                    </div>\r\n                                </td>\r\n                            </tr>\r\n                        </tbody>\r\n                    </table>\r\n                </init-position-scroll>\r\n            </div>\r\n            <div *ngIf=\"sliderIndex!==currentViewIndex\">\r\n                <div class=\"weekview-allday-table\">\r\n                    <div class=\"weekview-allday-label\">{{allDayLabel}}</div>\r\n                    <div class=\"weekview-allday-content-wrapper scroll-content\">\r\n                        <table class=\"table table-fixed weekview-allday-content-table\">\r\n                            <tbody>\r\n                                <tr>\r\n                                    <td *ngFor=\"let day of views[sliderIndex].dates\" class=\"calendar-cell\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewInactiveAllDayEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{day:day}\">\r\n                                        </ng-template>\r\n                                    </td>\r\n                                </tr>\r\n                            </tbody>\r\n                        </table>\r\n                    </div>\r\n                </div>\r\n                <init-position-scroll class=\"weekview-normal-event-container\" [initPosition]=\"initScrollPosition\">\r\n                    <table class=\"table table-bordered table-fixed weekview-normal-event-table\">\r\n                        <tbody>\r\n                            <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                                <td class=\"calendar-hour-column text-center\">\r\n                                    {{hourColumnLabels[i]}}\r\n                                </td>\r\n                                <td *ngFor=\"let tm of row\" class=\"calendar-cell\">\r\n                                    <div [ngClass]=\"{'calendar-event-wrap': tm.events}\" *ngIf=\"tm.events\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewInactiveNormalEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts}\">\r\n                                        </ng-template>\r\n                                    </div>\r\n                                </td>\r\n                            </tr>\r\n                        </tbody>\r\n                    </table>\r\n                </init-position-scroll>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</div>", styles: [".weekview-slide-container .table-fixed{table-layout:fixed}.weekview-slide-container .table{width:100%;max-width:100%;background-color:transparent}.weekview-slide-container .table>thead>tr>th,.weekview-slide-container .table>tbody>tr>th,.weekview-slide-container .table>tfoot>tr>th,.weekview-slide-container .table>thead>tr>td,.weekview-slide-container .table>tbody>tr>td,.weekview-slide-container .table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.weekview-slide-container .table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.weekview-slide-container .table>thead:first-child>tr:first-child>th,.weekview-slide-container .table>thead:first-child>tr:first-child>td{border-top:0}.weekview-slide-container .table>tbody+tbody{border-top:2px solid #ddd}.weekview-slide-container .table-bordered{border:1px solid #ddd}.weekview-slide-container .table-bordered>thead>tr>th,.weekview-slide-container .table-bordered>tbody>tr>th,.weekview-slide-container .table-bordered>tfoot>tr>th,.weekview-slide-container .table-bordered>thead>tr>td,.weekview-slide-container .table-bordered>tbody>tr>td,.weekview-slide-container .table-bordered>tfoot>tr>td{border:1px solid #ddd}.weekview-slide-container .table-bordered>thead>tr>th,.weekview-slide-container .table-bordered>thead>tr>td{border-bottom-width:2px}.weekview-slide-container .table-striped>tbody>tr:nth-child(odd)>td,.weekview-slide-container .table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.calendar-cell{padding:0!important;height:37px}.weekview-swiper{height:100%}.weekview-slide-container{display:block!important}.weekview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-left:1px solid #ddd}[dir=rtl] .weekview-allday-label{float:right;border-right:1px solid #ddd}.weekview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:50px}.weekview-allday-content-table{min-height:50px}.weekview-allday-content-table td{border-left:1px solid #ddd;border-right:1px solid #ddd}.weekview-header th{overflow:hidden;white-space:nowrap;font-size:14px}.weekview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.weekview-normal-event-container{margin-top:87px;overflow:hidden;inset:0;position:absolute;font-size:14px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.weekview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.weekview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.weekview-allday-label{padding-top:4px}.weekview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.weekview-slide-container .table>thead>tr>th.weekview-header{padding-left:0;padding-right:0;font-size:12px}.weekview-allday-label{line-height:20px}.weekview-allday-content-wrapper{margin-left:31px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"], dependencies: [{ kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: initPositionScrollComponent, selector: "init-position-scroll", inputs: ["initPosition", "emitEvent"], outputs: ["onScroll"] }], encapsulation: i0.ViewEncapsulation.None }); }
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: WeekViewComponent, decorators: [{
             type: Component,
-            args: [{ selector: 'weekview', standalone: false, template: `
-        <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()"
-                    class="slides-container">
-            <ng-template swiperSlide class="slide-container">
-                <table class="table table-bordered table-fixed weekview-header">
-                    <thead>
-                    <tr>
-                        <th class="calendar-hour-column"></th>
-                        <th class="weekview-header text-center" *ngFor="let date of views[0].dates"
-                            [ngClass]="getHighlightClass(date)"
-                            (click)="daySelected(date)">
-                            <ng-template [ngTemplateOutlet]="weekviewHeaderTemplate"
-                                         [ngTemplateOutletContext]="{viewDate:date}">
-                            </ng-template>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-                <div *ngIf="0===currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[0].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day, eventTemplate:weekviewAllDayEventTemplate}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition"
-                                          [emitEvent]="preserveScrollPosition" (onScroll)="setScrollPosition($event)">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[0].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell" tappable
-                                    (click)="select(tm.time, tm.events)">
-                                    <ng-template [ngTemplateOutlet]="weekviewNormalEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-                <div *ngIf="0!==currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[0].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[0].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell">
-                                    <ng-template [ngTemplateOutlet]="weekviewInactiveNormalEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <table class="table table-bordered table-fixed weekview-header">
-                    <thead>
-                    <tr>
-                        <th class="calendar-hour-column"></th>
-                        <th class="weekview-header text-center" *ngFor="let date of views[1].dates"
-                            [ngClass]="getHighlightClass(date)"
-                            (click)="daySelected(date)">
-                            <ng-template [ngTemplateOutlet]="weekviewHeaderTemplate"
-                                         [ngTemplateOutletContext]="{viewDate:date}">
-                            </ng-template>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-                <div *ngIf="1===currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[1].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day, eventTemplate:weekviewAllDayEventTemplate}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition"
-                                          [emitEvent]="preserveScrollPosition" (onScroll)="setScrollPosition($event)">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[1].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell" tappable
-                                    (click)="select(tm.time, tm.events)">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-                <div *ngIf="1!==currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[1].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[1].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <table class="table table-bordered table-fixed weekview-header">
-                    <thead>
-                    <tr>
-                        <th class="calendar-hour-column"></th>
-                        <th class="weekview-header text-center" *ngFor="let date of views[2].dates"
-                            [ngClass]="getHighlightClass(date)"
-                            (click)="daySelected(date)">
-                            <ng-template [ngTemplateOutlet]="weekviewHeaderTemplate"
-                                         [ngTemplateOutletContext]="{viewDate:date}">
-                            </ng-template>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-                <div *ngIf="2===currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[2].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day, eventTemplate:weekviewAllDayEventTemplate}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition"
-                                          [emitEvent]="preserveScrollPosition" (onScroll)="setScrollPosition($event)">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[2].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell" tappable
-                                    (click)="select(tm.time, tm.events)">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-                <div *ngIf="2!==currentViewIndex">
-                    <div class="weekview-allday-table">
-                        <div class="weekview-allday-label">{{allDayLabel}}</div>
-                        <div class="weekview-allday-content-wrapper scroll-content">
-                            <table class="table table-fixed weekview-allday-content-table">
-                                <tbody>
-                                <tr>
-                                    <td *ngFor="let day of views[2].dates" class="calendar-cell">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveAllDayEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{day:day}">
-                                        </ng-template>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <init-position-scroll class="weekview-normal-event-container" [initPosition]="initScrollPosition">
-                        <table class="table table-bordered table-fixed weekview-normal-event-table">
-                            <tbody>
-                            <tr *ngFor="let row of views[2].rows; let i = index">
-                                <td class="calendar-hour-column text-center">
-                                    {{hourColumnLabels[i]}}
-                                </td>
-                                <td *ngFor="let tm of row" class="calendar-cell">
-                                    <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                                        <ng-template [ngTemplateOutlet]="weekviewInactiveNormalEventSectionTemplate"
-                                                     [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                        </ng-template>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </init-position-scroll>
-                </div>
-            </ng-template>
-        </swiper>
-    `, encapsulation: ViewEncapsulation.None, styles: [".table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.calendar-cell{padding:0!important;height:37px}.slides-container{height:100%}.slide-container{display:block!important}.weekview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-left:1px solid #ddd}[dir=rtl] .weekview-allday-label{float:right;border-right:1px solid #ddd}.weekview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:50px}.weekview-allday-content-table{min-height:50px}.weekview-allday-content-table td{border-left:1px solid #ddd;border-right:1px solid #ddd}.weekview-header th{overflow:hidden;white-space:nowrap;font-size:14px}.weekview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.weekview-normal-event-container{margin-top:87px;overflow:hidden;inset:0;position:absolute;font-size:14px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.weekview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.weekview-allday-label{padding-top:4px}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.table>thead>tr>th.weekview-header{padding-left:0;padding-right:0;font-size:12px}.weekview-allday-label{line-height:20px}.weekview-allday-content-wrapper{margin-left:31px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"] }]
-        }], ctorParameters: () => [{ type: CalendarService }, { type: i0.ElementRef }, { type: i0.NgZone }], propDecorators: { class: [{
+            args: [{ selector: 'weekview', encapsulation: ViewEncapsulation.None, standalone: false, template: "<div class=\"swiper weekview-swiper\" #weekViewSwiper>\r\n    <div class=\"swiper-wrapper slides-container\" [dir]=\"dir\">\r\n        <div *ngFor=\"let sliderIndex of sliderIndexList\" class=\"swiper-slide slide-container weekview-slide-container\">\r\n            <table class=\"table table-bordered table-fixed weekview-header\">\r\n                <thead>\r\n                    <tr>\r\n                        <th class=\"calendar-hour-column\"></th>\r\n                        <th class=\"weekview-header text-center\" *ngFor=\"let date of views[sliderIndex].dates\"\r\n                            [ngClass]=\"getHighlightClass(date)\" (click)=\"daySelected(date)\">\r\n                            <ng-template [ngTemplateOutlet]=\"weekviewHeaderTemplate\"\r\n                                [ngTemplateOutletContext]=\"{viewDate:date}\">\r\n                            </ng-template>\r\n                        </th>\r\n                    </tr>\r\n                </thead>\r\n            </table>\r\n            <div *ngIf=\"sliderIndex===currentViewIndex\">\r\n                <div class=\"weekview-allday-table\">\r\n                    <div class=\"weekview-allday-label\">{{allDayLabel}}</div>\r\n                    <div class=\"weekview-allday-content-wrapper scroll-content\">\r\n                        <table class=\"table table-fixed weekview-allday-content-table\">\r\n                            <tbody>\r\n                                <tr>\r\n                                    <td *ngFor=\"let day of views[sliderIndex].dates\" class=\"calendar-cell\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewAllDayEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{day:day, eventTemplate:weekviewAllDayEventTemplate}\">\r\n                                        </ng-template>\r\n                                    </td>\r\n                                </tr>\r\n                            </tbody>\r\n                        </table>\r\n                    </div>\r\n                </div>\r\n                <init-position-scroll class=\"weekview-normal-event-container\" [initPosition]=\"initScrollPosition\"\r\n                    [emitEvent]=\"preserveScrollPosition\" (onScroll)=\"setScrollPosition($event)\">\r\n                    <table class=\"table table-bordered table-fixed weekview-normal-event-table\">\r\n                        <tbody>\r\n                            <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                                <td class=\"calendar-hour-column text-center\">\r\n                                    {{hourColumnLabels[i]}}\r\n                                </td>\r\n                                <td *ngFor=\"let tm of row\" class=\"calendar-cell\" tappable\r\n                                    (click)=\"select(tm.time, tm.events)\">\r\n                                    <div [ngClass]=\"{'calendar-event-wrap': tm.events}\" *ngIf=\"tm.events\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewNormalEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts, eventTemplate:weekviewNormalEventTemplate}\">\r\n                                        </ng-template>\r\n                                    </div>\r\n                                </td>\r\n                            </tr>\r\n                        </tbody>\r\n                    </table>\r\n                </init-position-scroll>\r\n            </div>\r\n            <div *ngIf=\"sliderIndex!==currentViewIndex\">\r\n                <div class=\"weekview-allday-table\">\r\n                    <div class=\"weekview-allday-label\">{{allDayLabel}}</div>\r\n                    <div class=\"weekview-allday-content-wrapper scroll-content\">\r\n                        <table class=\"table table-fixed weekview-allday-content-table\">\r\n                            <tbody>\r\n                                <tr>\r\n                                    <td *ngFor=\"let day of views[sliderIndex].dates\" class=\"calendar-cell\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewInactiveAllDayEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{day:day}\">\r\n                                        </ng-template>\r\n                                    </td>\r\n                                </tr>\r\n                            </tbody>\r\n                        </table>\r\n                    </div>\r\n                </div>\r\n                <init-position-scroll class=\"weekview-normal-event-container\" [initPosition]=\"initScrollPosition\">\r\n                    <table class=\"table table-bordered table-fixed weekview-normal-event-table\">\r\n                        <tbody>\r\n                            <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                                <td class=\"calendar-hour-column text-center\">\r\n                                    {{hourColumnLabels[i]}}\r\n                                </td>\r\n                                <td *ngFor=\"let tm of row\" class=\"calendar-cell\">\r\n                                    <div [ngClass]=\"{'calendar-event-wrap': tm.events}\" *ngIf=\"tm.events\">\r\n                                        <ng-template [ngTemplateOutlet]=\"weekviewInactiveNormalEventSectionTemplate\"\r\n                                            [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts}\">\r\n                                        </ng-template>\r\n                                    </div>\r\n                                </td>\r\n                            </tr>\r\n                        </tbody>\r\n                    </table>\r\n                </init-position-scroll>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</div>", styles: [".weekview-slide-container .table-fixed{table-layout:fixed}.weekview-slide-container .table{width:100%;max-width:100%;background-color:transparent}.weekview-slide-container .table>thead>tr>th,.weekview-slide-container .table>tbody>tr>th,.weekview-slide-container .table>tfoot>tr>th,.weekview-slide-container .table>thead>tr>td,.weekview-slide-container .table>tbody>tr>td,.weekview-slide-container .table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.weekview-slide-container .table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.weekview-slide-container .table>thead:first-child>tr:first-child>th,.weekview-slide-container .table>thead:first-child>tr:first-child>td{border-top:0}.weekview-slide-container .table>tbody+tbody{border-top:2px solid #ddd}.weekview-slide-container .table-bordered{border:1px solid #ddd}.weekview-slide-container .table-bordered>thead>tr>th,.weekview-slide-container .table-bordered>tbody>tr>th,.weekview-slide-container .table-bordered>tfoot>tr>th,.weekview-slide-container .table-bordered>thead>tr>td,.weekview-slide-container .table-bordered>tbody>tr>td,.weekview-slide-container .table-bordered>tfoot>tr>td{border:1px solid #ddd}.weekview-slide-container .table-bordered>thead>tr>th,.weekview-slide-container .table-bordered>thead>tr>td{border-bottom-width:2px}.weekview-slide-container .table-striped>tbody>tr:nth-child(odd)>td,.weekview-slide-container .table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.calendar-cell{padding:0!important;height:37px}.weekview-swiper{height:100%}.weekview-slide-container{display:block!important}.weekview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-left:1px solid #ddd}[dir=rtl] .weekview-allday-label{float:right;border-right:1px solid #ddd}.weekview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:50px}.weekview-allday-content-table{min-height:50px}.weekview-allday-content-table td{border-left:1px solid #ddd;border-right:1px solid #ddd}.weekview-header th{overflow:hidden;white-space:nowrap;font-size:14px}.weekview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.weekview-normal-event-container{margin-top:87px;overflow:hidden;inset:0;position:absolute;font-size:14px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.weekview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.weekview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.weekview-allday-label{padding-top:4px}.weekview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.weekview-slide-container .table>thead>tr>th.weekview-header{padding-left:0;padding-right:0;font-size:12px}.weekview-allday-label{line-height:20px}.weekview-allday-content-wrapper{margin-left:31px}[dir=rtl] .weekview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"] }]
+        }], ctorParameters: () => [{ type: CalendarService }, { type: i0.ElementRef }, { type: i0.NgZone }], propDecorators: { swiperElement: [{
+                type: ViewChild,
+                args: ['weekViewSwiper']
+            }], class: [{
                 type: HostBinding,
                 args: ['class.weekview']
-            }], slider: [{
-                type: ViewChild,
-                args: ['swiper', { static: false }]
             }], weekviewHeaderTemplate: [{
                 type: Input
             }], weekviewAllDayEventTemplate: [{
@@ -2182,10 +1366,14 @@ class DayViewComponent {
         this.class = true;
         this.dir = '';
         this.scrollToHour = 0;
+        this.lockSwipeToPrev = false;
+        this.lockSwipeToNext = false;
+        this.lockSwipes = false;
         this.onRangeChanged = new EventEmitter();
         this.onEventSelected = new EventEmitter();
         this.onTimeSelected = new EventEmitter();
         this.onTitleChanged = new EventEmitter(true);
+        this.sliderIndexList = [0, 1, 2];
         this.views = [];
         this.currentViewIndex = 0;
         this.direction = 0;
@@ -2211,7 +1399,8 @@ class DayViewComponent {
                 time.setDate(currentDate);
                 rows.push({
                     time,
-                    events: []
+                    events: [],
+                    eventsGroupByCategory: new Map()
                 });
             }
         }
@@ -2248,7 +1437,7 @@ class DayViewComponent {
                 const overlapNumber = event.position + 1;
                 event.overlapNumber = overlapNumber;
                 const eventQueue = [event];
-                while (event = eventQueue.shift()) {
+                while ((event = eventQueue.shift())) {
                     let index = event.startIndex * hourParts + event.startOffset;
                     while (index < event.endIndex * hourParts - event.endOffset) {
                         if (!cells[index].calculated) {
@@ -2276,6 +1465,9 @@ class DayViewComponent {
             this.sliderOptions = {};
         }
         this.sliderOptions.loop = true;
+        this.sliderOptions.allowSlidePrev = !this.lockSwipeToPrev;
+        this.sliderOptions.allowSlideNext = !this.lockSwipeToNext;
+        this.sliderOptions.allowTouchMove = !this.lockSwipes;
         this.hourRange = (this.endHour - this.startHour) * this.hourSegments;
         if (this.dateFormatter && this.dateFormatter.formatDayViewTitle) {
             this.formatTitle = this.dateFormatter.formatDayViewTitle;
@@ -2306,21 +1498,34 @@ class DayViewComponent {
         });
         this.slideChangedSubscription = this.calendarService.slideChanged$.subscribe(direction => {
             if (direction === 1) {
-                this.slider.swiperRef.slideNext();
+                this.slider.slideNext();
             }
             else if (direction === -1) {
-                this.slider.swiperRef.slidePrev();
+                this.slider.slidePrev();
             }
         });
         this.slideUpdatedSubscription = this.calendarService.slideUpdated$.subscribe(() => {
-            this.slider.swiperRef.update();
+            this.slider.update();
         });
     }
     ngAfterViewInit() {
+        this.slider = new Swiper(this.swiperElement?.nativeElement, this.sliderOptions);
+        let me = this;
+        this.slider.on('slideNextTransitionEnd', function () {
+            me.onSlideChanged(1);
+        });
+        this.slider.on('slidePrevTransitionEnd', function () {
+            me.onSlideChanged(-1);
+        });
+        if (this.dir === 'rtl') {
+            this.slider.changeLanguageDirection('rtl');
+        }
         const title = this.getTitle();
         this.onTitleChanged.emit(title);
         if (this.scrollToHour > 0) {
-            const hourColumns = this.elm.nativeElement.querySelector('.dayview-normal-event-container').querySelectorAll('.calendar-hour-column');
+            const hourColumns = this.elm.nativeElement
+                .querySelector('.dayview-normal-event-container')
+                .querySelectorAll('.calendar-hour-column');
             const me = this;
             setTimeout(() => {
                 me.initScrollPosition = hourColumns[me.scrollToHour - me.startHour].offsetTop;
@@ -2331,7 +1536,8 @@ class DayViewComponent {
         if (!this.inited) {
             return;
         }
-        if ((changes['startHour'] || changes['endHour']) && (!changes['startHour'].isFirstChange() || !changes['endHour'].isFirstChange())) {
+        if ((changes['startHour'] || changes['endHour']) &&
+            (!changes['startHour'].isFirstChange() || !changes['endHour'].isFirstChange())) {
             this.views = [];
             this.hourRange = (this.endHour - this.startHour) * this.hourSegments;
             this.direction = 0;
@@ -2344,15 +1550,15 @@ class DayViewComponent {
         }
         const lockSwipeToPrev = changes['lockSwipeToPrev'];
         if (lockSwipeToPrev) {
-            this.slider.swiperRef.allowSlidePrev = !lockSwipeToPrev.currentValue;
+            this.slider.allowSlidePrev = !lockSwipeToPrev.currentValue;
         }
         const lockSwipeToNext = changes['lockSwipeToNext'];
         if (lockSwipeToPrev) {
-            this.slider.swiperRef.allowSlideNext = !lockSwipeToNext.currentValue;
+            this.slider.allowSlideNext = !lockSwipeToNext.currentValue;
         }
         const lockSwipes = changes['lockSwipes'];
         if (lockSwipes) {
-            this.slider.swiperRef.allowTouchMove = !lockSwipes.currentValue;
+            this.slider.allowTouchMove = !lockSwipes.currentValue;
         }
     }
     ngOnDestroy() {
@@ -2373,36 +1579,9 @@ class DayViewComponent {
             this.slideUpdatedSubscription = undefined;
         }
     }
-    onSlideChanged() {
-        this.zone.run(() => {
-            if (this.callbackOnInit) {
-                this.callbackOnInit = false;
-                return;
-            }
-            let direction = 0;
-            const currentViewIndex = this.currentViewIndex;
-            let currentSlideIndex = this.slider.swiperRef.activeIndex;
-            currentSlideIndex = (currentSlideIndex + 2) % 3;
-            if (isNaN(currentSlideIndex)) {
-                currentSlideIndex = currentViewIndex;
-            }
-            if (currentSlideIndex - currentViewIndex === 1) {
-                direction = 1;
-            }
-            else if (currentSlideIndex === 0 && currentViewIndex === 2) {
-                direction = 1;
-                this.slider.swiperRef.slideTo(1, 0, false);
-            }
-            else if (currentViewIndex - currentSlideIndex === 1) {
-                direction = -1;
-            }
-            else if (currentSlideIndex === 2 && currentViewIndex === 0) {
-                direction = -1;
-                this.slider.swiperRef.slideTo(3, 0, false);
-            }
-            this.currentViewIndex = currentSlideIndex;
-            this.move(direction);
-        });
+    onSlideChanged(direction) {
+        this.currentViewIndex = (this.currentViewIndex + direction + 3) % 3;
+        this.move(direction);
     }
     move(direction) {
         if (direction === 0) {
@@ -2433,7 +1612,8 @@ class DayViewComponent {
     getViewData(startTime) {
         return {
             rows: DayViewComponent.createDateObjects(startTime, this.startHour, this.endHour, this.hourSegments),
-            allDayEvents: []
+            allDayEvents: [],
+            categorizedAllDayEventsMap: new Map()
         };
     }
     getRange(currentDate) {
@@ -2444,10 +1624,11 @@ class DayViewComponent {
         };
     }
     onDataLoaded() {
-        const eventSource = this.eventSource, len = eventSource ? eventSource.length : 0, startTime = this.range.startTime, endTime = this.range.endTime, utcStartTime = Date.UTC(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()), utcEndTime = Date.UTC(endTime.getFullYear(), endTime.getMonth(), endTime.getDate()), currentViewIndex = this.currentViewIndex, rows = this.views[currentViewIndex].rows, allDayEvents = this.views[currentViewIndex].allDayEvents = [], oneHour = 3600000, eps = 0.016, rangeStartRowIndex = this.startHour * this.hourSegments, rangeEndRowIndex = this.endHour * this.hourSegments;
+        const eventSource = this.eventSource, len = eventSource ? eventSource.length : 0, startTime = this.range.startTime, endTime = this.range.endTime, utcStartTime = Date.UTC(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()), utcEndTime = Date.UTC(endTime.getFullYear(), endTime.getMonth(), endTime.getDate()), currentViewIndex = this.currentViewIndex, rows = this.views[currentViewIndex].rows, allDayEvents = (this.views[currentViewIndex].allDayEvents = []), oneHour = 3600000, eps = 0.016, rangeStartRowIndex = this.startHour * this.hourSegments, rangeEndRowIndex = this.endHour * this.hourSegments;
         let normalEventInRange = false;
         for (let hour = 0; hour < this.hourRange; hour += 1) {
             rows[hour].events = [];
+            rows[hour].eventsGroupByCategory = undefined;
         }
         for (let i = 0; i < len; i += 1) {
             const event = eventSource[i];
@@ -2477,11 +1658,12 @@ class DayViewComponent {
                     timeDifferenceStart = 0;
                 }
                 else {
-                    timeDifferenceStart = (eventStartTime.getHours() + eventStartTime.getMinutes() / 60) * this.hourSegments;
+                    timeDifferenceStart =
+                        (eventStartTime.getHours() + eventStartTime.getMinutes() / 60) * this.hourSegments;
                 }
                 let timeDifferenceEnd;
                 if (eventUTCEndTime > utcEndTime) {
-                    timeDifferenceEnd = (utcEndTime - utcStartTime) / oneHour * this.hourSegments;
+                    timeDifferenceEnd = ((utcEndTime - utcStartTime) / oneHour) * this.hourSegments;
                 }
                 else {
                     timeDifferenceEnd = (eventEndTime.getHours() + eventEndTime.getMinutes() / 60) * this.hourSegments;
@@ -2532,19 +1714,69 @@ class DayViewComponent {
                         eventSet.push(displayEvent);
                         rows[startIndex].events = eventSet;
                     }
+                    // setup eventsGroupedByCategory
+                    if (this.dayviewShowCategoryView && this.dayviewCategorySource && event.category) {
+                        let groupedEvents = rows[startIndex].eventsGroupByCategory;
+                        if (groupedEvents) {
+                            if (Array.isArray(groupedEvents.get(event.category))) {
+                                groupedEvents.get(event.category)?.push(displayEvent);
+                            }
+                            else {
+                                groupedEvents.set(event.category, [displayEvent]);
+                            }
+                        }
+                        else {
+                            groupedEvents = new Map();
+                            groupedEvents.set(event.category, [displayEvent]);
+                            rows[startIndex].eventsGroupByCategory = groupedEvents;
+                        }
+                    }
                 }
             }
         }
         if (normalEventInRange) {
-            let orderedEvents = [];
-            for (let hour = 0; hour < this.hourRange; hour += 1) {
-                if (rows[hour].events) {
-                    rows[hour].events.sort(DayViewComponent.compareEventByStartOffset);
-                    orderedEvents = orderedEvents.concat(rows[hour].events);
+            if (this.dayviewShowCategoryView && this.dayviewCategorySource) {
+                for (const category of this.dayviewCategorySource) {
+                    let displayEvents = [];
+                    for (let hour = 0; hour < this.hourRange; hour += 1) {
+                        let groupedEvents = rows[hour].eventsGroupByCategory?.get(category);
+                        if (groupedEvents) {
+                            groupedEvents.sort(DayViewComponent.compareEventByStartOffset);
+                            displayEvents = displayEvents.concat(groupedEvents);
+                        }
+                    }
+                    if (displayEvents.length > 0) {
+                        this.placeEvents(displayEvents);
+                    }
                 }
             }
-            if (orderedEvents.length > 0) {
-                this.placeEvents(orderedEvents);
+            else {
+                let orderedEvents = [];
+                for (let hour = 0; hour < this.hourRange; hour += 1) {
+                    if (rows[hour].events) {
+                        rows[hour].events.sort(DayViewComponent.compareEventByStartOffset);
+                        orderedEvents = orderedEvents.concat(rows[hour].events);
+                    }
+                }
+                if (orderedEvents.length > 0) {
+                    this.placeEvents(orderedEvents);
+                }
+            }
+        }
+        if (this.dayviewShowCategoryView && this.dayviewCategorySource) {
+            this.categorizeAllDayEvents(allDayEvents);
+        }
+    }
+    categorizeAllDayEvents(allDayEvents) {
+        const categoryIdAllDayEventsMap = (this.views[this.currentViewIndex].categorizedAllDayEventsMap = new Map());
+        for (const displayAllDayEvent of allDayEvents) {
+            if (displayAllDayEvent.event.category) {
+                if (categoryIdAllDayEventsMap.get(displayAllDayEvent.event.category)) {
+                    categoryIdAllDayEventsMap.get(displayAllDayEvent.event.category)?.push(displayAllDayEvent);
+                }
+                else {
+                    categoryIdAllDayEventsMap.set(displayAllDayEvent.event.category, [displayAllDayEvent]);
+                }
             }
         }
     }
@@ -2562,13 +1794,19 @@ class DayViewComponent {
         startingDate.setHours(12, 0, 0, 0);
         return this.formatTitle(startingDate);
     }
-    select(selectedTime, events) {
+    select(row, category) {
+        const selectedTime = row.time;
+        let events = row.events;
+        if (category) {
+            events = row.eventsGroupByCategory?.get(category) || [];
+        }
         let disabled = false;
         if (this.markDisabled) {
             disabled = this.markDisabled(selectedTime);
         }
         this.onTimeSelected.emit({
             selectedTime,
+            category,
             events: events.map(e => e.event),
             disabled
         });
@@ -2582,7 +1820,8 @@ class DayViewComponent {
     }
     overlap(event1, event2) {
         let earlyEvent = event1, lateEvent = event2;
-        if (event1.startIndex > event2.startIndex || (event1.startIndex === event2.startIndex && event1.startOffset > event2.startOffset)) {
+        if (event1.startIndex > event2.startIndex ||
+            (event1.startIndex === event2.startIndex && event1.startOffset > event2.startOffset)) {
             earlyEvent = event2;
             lateEvent = event1;
         }
@@ -2590,7 +1829,8 @@ class DayViewComponent {
             return false;
         }
         else {
-            return !(earlyEvent.endIndex - lateEvent.startIndex === 1 && earlyEvent.endOffset + lateEvent.startOffset >= this.hourParts);
+            return !(earlyEvent.endIndex - lateEvent.startIndex === 1 &&
+                earlyEvent.endOffset + lateEvent.startOffset >= this.hourParts);
         }
     }
     calculatePosition(events) {
@@ -2630,383 +1870,19 @@ class DayViewComponent {
         this.initScrollPosition = scrollPosition;
     }
     static { this.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: DayViewComponent, deps: [{ token: CalendarService }, { token: i0.ElementRef }, { token: i0.NgZone }], target: i0.ɵɵFactoryTarget.Component }); }
-    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: DayViewComponent, isStandalone: false, selector: "dayview", inputs: { dayviewAllDayEventTemplate: "dayviewAllDayEventTemplate", dayviewNormalEventTemplate: "dayviewNormalEventTemplate", dayviewAllDayEventSectionTemplate: "dayviewAllDayEventSectionTemplate", dayviewNormalEventSectionTemplate: "dayviewNormalEventSectionTemplate", dayviewInactiveAllDayEventSectionTemplate: "dayviewInactiveAllDayEventSectionTemplate", dayviewInactiveNormalEventSectionTemplate: "dayviewInactiveNormalEventSectionTemplate", formatHourColumn: "formatHourColumn", formatDayTitle: "formatDayTitle", allDayLabel: "allDayLabel", hourParts: "hourParts", eventSource: "eventSource", markDisabled: "markDisabled", locale: "locale", dateFormatter: "dateFormatter", dir: "dir", scrollToHour: "scrollToHour", preserveScrollPosition: "preserveScrollPosition", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", startHour: "startHour", endHour: "endHour", sliderOptions: "sliderOptions", hourSegments: "hourSegments" }, outputs: { onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onTitleChanged: "onTitleChanged" }, host: { properties: { "class.dayview": "this.class" } }, viewQueries: [{ propertyName: "slider", first: true, predicate: ["swiper"], descendants: true }], usesOnChanges: true, ngImport: i0, template: `
-        <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()" class="slides-container">
-            <ng-template swiperSlide class="slide-container">
-                <div class="dayview-allday-table">
-                    <div class="dayview-allday-label">{{allDayLabel}}</div>
-                    <div class="dayview-allday-content-wrapper scroll-content">
-                        <table class="table table-bordered dayview-allday-content-table">
-                            <tbody>
-                            <tr>
-                                <td class="calendar-cell" [ngClass]="{'calendar-event-wrap':views[0].allDayEvents.length>0}"
-                                    [ngStyle]="{height: 25*views[0].allDayEvents.length+'px'}"
-                                    *ngIf="0===currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[0].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}">
-                                    </ng-template>
-                                </td>
-                                <td class="calendar-cell" *ngIf="0!==currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewInactiveAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[0].allDayEvents}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <init-position-scroll *ngIf="0===currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition" [emitEvent]="preserveScrollPosition"
-                                      (onScroll)="setScrollPosition($event)">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[0].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell" tappable (click)="select(tm.time, tm.events)">
-                                <ng-template [ngTemplateOutlet]="dayviewNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-                <init-position-scroll *ngIf="0!==currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[0].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell">
-                                <ng-template [ngTemplateOutlet]="dayviewInactiveNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <div class="dayview-allday-table">
-                    <div class="dayview-allday-label">{{allDayLabel}}</div>
-                    <div class="dayview-allday-content-wrapper scroll-content">
-                        <table class="table table-bordered dayview-allday-content-table">
-                            <tbody>
-                            <tr>
-                                <td class="calendar-cell" [ngClass]="{'calendar-event-wrap':views[1].allDayEvents.length>0}"
-                                    [ngStyle]="{height: 25*views[1].allDayEvents.length+'px'}"
-                                    *ngIf="1===currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[1].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}">
-                                    </ng-template>
-                                </td>
-                                <td class="calendar-cell" *ngIf="1!==currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewInactiveAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[1].allDayEvents}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <init-position-scroll *ngIf="1===currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition" [emitEvent]="preserveScrollPosition"
-                                      (onScroll)="setScrollPosition($event)">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[1].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell" tappable (click)="select(tm.time, tm.events)">
-                                <ng-template [ngTemplateOutlet]="dayviewNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-                <init-position-scroll *ngIf="1!==currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[1].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell">
-                                <ng-template [ngTemplateOutlet]="dayviewInactiveNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <div class="dayview-allday-table">
-                    <div class="dayview-allday-label">{{allDayLabel}}</div>
-                    <div class="dayview-allday-content-wrapper scroll-content">
-                        <table class="table table-bordered dayview-allday-content-table">
-                            <tbody>
-                            <tr>
-                                <td class="calendar-cell" [ngClass]="{'calendar-event-wrap':views[2].allDayEvents.length>0}"
-                                    [ngStyle]="{height: 25*views[2].allDayEvents.length+'px'}"
-                                    *ngIf="2===currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[2].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}">
-                                    </ng-template>
-                                </td>
-                                <td class="calendar-cell" *ngIf="2!==currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewInactiveAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[2].allDayEvents}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <init-position-scroll *ngIf="2===currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition" [emitEvent]="preserveScrollPosition"
-                                      (onScroll)="setScrollPosition($event)">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[2].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell" tappable (click)="select(tm.time, tm.events)">
-                                <ng-template [ngTemplateOutlet]="dayviewNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-                <init-position-scroll *ngIf="2!==currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[2].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell">
-                                <ng-template [ngTemplateOutlet]="dayviewInactiveNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-            </ng-template>
-        </swiper>
-    `, isInline: true, styles: [".table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.slides-container{height:100%}.slide-container{display:block!important}.calendar-cell{padding:0!important;height:37px}.dayview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-left:1px solid #ddd}[dir=rtl] .dayview-allday-label{border-right:1px solid #ddd;float:right}.dayview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:50px}.dayview-allday-content-table{min-height:50px}.dayview-allday-content-table td{border-left:1px solid #ddd;border-right:1px solid #ddd}.dayview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.dayview-normal-event-container{margin-top:50px;overflow:hidden;inset:0;position:absolute;font-size:14px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.dayview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.dayview-allday-label{padding-top:4px}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.dayview-allday-label{line-height:20px}.dayview-allday-content-wrapper{margin-left:31px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"], dependencies: [{ kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: i2.NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }, { kind: "component", type: i3.SwiperComponent, selector: "swiper, [swiper]", inputs: ["enabled", "on", "direction", "touchEventsTarget", "initialSlide", "speed", "cssMode", "updateOnWindowResize", "resizeObserver", "nested", "focusableElements", "width", "height", "preventInteractionOnTransition", "userAgent", "url", "edgeSwipeDetection", "edgeSwipeThreshold", "freeMode", "autoHeight", "setWrapperSize", "virtualTranslate", "effect", "breakpoints", "spaceBetween", "slidesPerView", "maxBackfaceHiddenSlides", "grid", "slidesPerGroup", "slidesPerGroupSkip", "centeredSlides", "centeredSlidesBounds", "slidesOffsetBefore", "slidesOffsetAfter", "normalizeSlideIndex", "centerInsufficientSlides", "watchOverflow", "roundLengths", "touchRatio", "touchAngle", "simulateTouch", "shortSwipes", "longSwipes", "longSwipesRatio", "longSwipesMs", "followFinger", "allowTouchMove", "threshold", "touchMoveStopPropagation", "touchStartPreventDefault", "touchStartForcePreventDefault", "touchReleaseOnEdges", "uniqueNavElements", "resistance", "resistanceRatio", "watchSlidesProgress", "grabCursor", "preventClicks", "preventClicksPropagation", "slideToClickedSlide", "preloadImages", "updateOnImagesReady", "loop", "loopAdditionalSlides", "loopedSlides", "loopedSlidesLimit", "loopFillGroupWithBlank", "loopPreventsSlide", "rewind", "allowSlidePrev", "allowSlideNext", "swipeHandler", "noSwiping", "noSwipingClass", "noSwipingSelector", "passiveListeners", "containerModifierClass", "slideClass", "slideBlankClass", "slideActiveClass", "slideDuplicateActiveClass", "slideVisibleClass", "slideDuplicateClass", "slideNextClass", "slideDuplicateNextClass", "slidePrevClass", "slideDuplicatePrevClass", "wrapperClass", "runCallbacksOnInit", "observeParents", "observeSlideChildren", "a11y", "autoplay", "controller", "coverflowEffect", "cubeEffect", "fadeEffect", "flipEffect", "creativeEffect", "cardsEffect", "hashNavigation", "history", "keyboard", "lazy", "mousewheel", "parallax", "thumbs", "zoom", "slidesPerGroupAuto", "class", "id", "navigation", "pagination", "scrollbar", "virtual", "config"], outputs: ["_beforeBreakpoint", "_containerClasses", "_slideClass", "_swiper", "activeIndexChange", "afterInit", "autoplay", "autoplayStart", "autoplayStop", "autoplayPause", "autoplayResume", "beforeDestroy", "beforeInit", "beforeLoopFix", "beforeResize", "beforeSlideChangeStart", "beforeTransitionStart", "breakpoint", "changeDirection", "click", "doubleTap", "doubleClick", "destroy", "fromEdge", "hashChange", "hashSet", "imagesReady", "init", "keyPress", "lazyImageLoad", "lazyImageReady", "loopFix", "momentumBounce", "navigationHide", "navigationShow", "navigationPrev", "navigationNext", "observerUpdate", "orientationchange", "paginationHide", "paginationRender", "paginationShow", "paginationUpdate", "progress", "reachBeginning", "reachEnd", "realIndexChange", "resize", "scroll", "scrollbarDragEnd", "scrollbarDragMove", "scrollbarDragStart", "setTransition", "setTranslate", "slideChange", "slideChangeTransitionEnd", "slideChangeTransitionStart", "slideNextTransitionEnd", "slideNextTransitionStart", "slidePrevTransitionEnd", "slidePrevTransitionStart", "slideResetTransitionStart", "slideResetTransitionEnd", "sliderMove", "sliderFirstMove", "slidesLengthChange", "slidesGridLengthChange", "snapGridLengthChange", "snapIndexChange", "tap", "toEdge", "touchEnd", "touchMove", "touchMoveOpposite", "touchStart", "transitionEnd", "transitionStart", "update", "zoomChange", "swiper", "lock", "unlock"] }, { kind: "directive", type: i3.SwiperSlideDirective, selector: "ng-template[swiperSlide]", inputs: ["virtualIndex", "class", "ngClass", "data-swiper-autoplay", "zoom"] }, { kind: "component", type: initPositionScrollComponent, selector: "init-position-scroll", inputs: ["initPosition", "emitEvent"], outputs: ["onScroll"] }], encapsulation: i0.ViewEncapsulation.None }); }
+    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: DayViewComponent, isStandalone: false, selector: "dayview", inputs: { dayviewCategoryItemTemplate: "dayviewCategoryItemTemplate", dayviewAllDayEventTemplate: "dayviewAllDayEventTemplate", dayviewNormalEventTemplate: "dayviewNormalEventTemplate", dayviewAllDayEventSectionTemplate: "dayviewAllDayEventSectionTemplate", dayviewNormalEventSectionTemplate: "dayviewNormalEventSectionTemplate", dayviewInactiveAllDayEventSectionTemplate: "dayviewInactiveAllDayEventSectionTemplate", dayviewInactiveNormalEventSectionTemplate: "dayviewInactiveNormalEventSectionTemplate", formatHourColumn: "formatHourColumn", formatDayTitle: "formatDayTitle", allDayLabel: "allDayLabel", hourParts: "hourParts", eventSource: "eventSource", markDisabled: "markDisabled", locale: "locale", dateFormatter: "dateFormatter", dir: "dir", scrollToHour: "scrollToHour", preserveScrollPosition: "preserveScrollPosition", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", startHour: "startHour", endHour: "endHour", sliderOptions: "sliderOptions", hourSegments: "hourSegments", dayviewCategorySource: "dayviewCategorySource", dayviewShowCategoryView: "dayviewShowCategoryView" }, outputs: { onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onTitleChanged: "onTitleChanged" }, host: { properties: { "class.dayview": "this.class" } }, viewQueries: [{ propertyName: "swiperElement", first: true, predicate: ["dayViewSwiper"], descendants: true }], usesOnChanges: true, ngImport: i0, template: "<div class=\"swiper dayview-swiper\" #dayViewSwiper>\r\n  <div class=\"swiper-wrapper slides-container\" [dir]=\"dir\">\r\n    <div *ngFor=\"let sliderIndex of sliderIndexList\" class=\"swiper-slide slide-container dayview-slide-container\">\r\n      <ng-container *ngIf=\"!dayviewShowCategoryView\">\r\n        <div class=\"dayview-allday-table\">\r\n          <div class=\"dayview-allday-label\">{{allDayLabel}}</div>\r\n          <div class=\"dayview-allday-content-wrapper scroll-content\">\r\n            <table class=\"table table-bordered dayview-allday-content-table\">\r\n              <tbody>\r\n                <tr>\r\n                  <td *ngIf=\"sliderIndex===currentViewIndex\" class=\"calendar-cell\"\r\n                    [ngClass]=\"{'calendar-event-wrap':views[sliderIndex].allDayEvents.length>0}\"\r\n                    [ngStyle]=\"{height: 25*views[sliderIndex].allDayEvents.length+'px'}\">\r\n                    <ng-template [ngTemplateOutlet]=\"dayviewAllDayEventSectionTemplate\"\r\n                      [ngTemplateOutletContext]=\"{allDayEvents:views[sliderIndex].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}\">\r\n                    </ng-template>\r\n                  </td>\r\n                  <td *ngIf=\"sliderIndex!==currentViewIndex\" class=\"calendar-cell\"\r\n                    [ngClass]=\"{'calendar-event-wrap':views[sliderIndex].allDayEvents.length>0}\"\r\n                    [ngStyle]=\"{height: 25*views[sliderIndex].allDayEvents.length+'px'}\">\r\n                    <ng-template [ngTemplateOutlet]=\"dayviewInactiveAllDayEventSectionTemplate\"\r\n                      [ngTemplateOutletContext]=\"{allDayEvents:views[sliderIndex].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}\">\r\n                    </ng-template>\r\n                  </td>\r\n                </tr>\r\n              </tbody>\r\n            </table>\r\n          </div>\r\n        </div>\r\n        <init-position-scroll *ngIf=\"sliderIndex===currentViewIndex\" class=\"dayview-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\" [emitEvent]=\"preserveScrollPosition\"\r\n          (onScroll)=\"setScrollPosition($event)\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let tm of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{hourColumnLabels[i]}}\r\n                </td>\r\n                <td class=\"calendar-cell\" tappable (click)=\"select(tm)\">\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n        <init-position-scroll *ngIf=\"sliderIndex!==currentViewIndex\" class=\"dayview-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let tm of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{hourColumnLabels[i]}}\r\n                </td>\r\n                <td class=\"calendar-cell\">\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewInactiveNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n      </ng-container>\r\n\r\n      <ng-container *ngIf=\"dayviewShowCategoryView\">\r\n        <div class=\"dayview-category-header\">\r\n          <table class=\"table table-fixed table-bordered dayview-category-header-table\">\r\n            <thead>\r\n              <tr>\r\n                <th class=\"dayview-category-header-item calendar-hour-column\"></th>\r\n                <th *ngFor=\"let category of dayviewCategorySource\" class=\"dayview-category-header-item\">\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewCategoryItemTemplate\" [ngTemplateOutletContext]=\"{category}\">\r\n                  </ng-template>\r\n                </th>\r\n              </tr>\r\n            </thead>\r\n          </table>\r\n        </div>\r\n\r\n        <div class=\"dayview-allday-table\">\r\n          <div class=\"dayview-allday-label\">{{ allDayLabel }}</div>\r\n          <div class=\"dayview-allday-content-wrapper dayview-allday-category-wrapper scroll-content\">\r\n            <table class=\"table table-fixed table-bordered dayview-allday-content-table\">\r\n              <tbody>\r\n                <tr>\r\n                  <td class=\"calendar-cell\" *ngFor=\"let category of dayviewCategorySource\">\r\n                    <div class=\"calendar-event-wrap\">\r\n                      <ng-template *ngIf=\"sliderIndex === currentViewIndex\"\r\n                        [ngTemplateOutlet]=\"dayviewAllDayEventSectionTemplate\"\r\n                        [ngTemplateOutletContext]=\"{allDayEvents: views[currentViewIndex].categorizedAllDayEventsMap.get(category)!, eventTemplate: dayviewAllDayEventTemplate}\">\r\n                      </ng-template>\r\n                      <ng-template *ngIf=\"sliderIndex !== currentViewIndex \"\r\n                        [ngTemplateOutlet]=\"dayviewInactiveAllDayEventSectionTemplate\"\r\n                        [ngTemplateOutletContext]=\"{allDayEvents: views[currentViewIndex].categorizedAllDayEventsMap.get(category)!, eventTemplate: dayviewAllDayEventTemplate}\">\r\n                      </ng-template>\r\n                    </div>\r\n                  </td>\r\n                </tr>\r\n              </tbody>\r\n            </table>\r\n          </div>\r\n        </div>\r\n        <init-position-scroll *ngIf=\"sliderIndex === currentViewIndex\"\r\n          class=\"dayview-normal-event-container dayview-categorized-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\" [emitEvent]=\"preserveScrollPosition\"\r\n          (onScroll)=\"setScrollPosition($event)\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{ hourColumnLabels[i] }}\r\n                </td>\r\n                <td *ngIf=\"dayviewCategorySource?.size === 0\" class=\"calendar-cell\" (click)=\"select(row)\" tappable>\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: [], time: row.time }, hourParts, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n                <td *ngFor=\"let category of dayviewCategorySource\" class=\"calendar-cell\" (click)=\"select(row, category)\"\r\n                  tappable>\r\n                  <ng-template\r\n                    [ngTemplateOutlet]=\"dayviewNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: row.eventsGroupByCategory?.get(category)!, time: row.time }, hourParts, category, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n\r\n        <init-position-scroll *ngIf=\"sliderIndex !== currentViewIndex\"\r\n          class=\"dayview-normal-event-container dayview-categorized-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{ hourColumnLabels[i] }}\r\n                </td>\r\n                <td *ngIf=\"dayviewCategorySource?.size === 0\" class=\"calendar-cell\" (click)=\"select(row)\" tappable>\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewInactiveNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: [], time: row.time }, hourParts, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n                <td *ngFor=\"let category of dayviewCategorySource\" class=\"calendar-cell\" (click)=\"select(row, category)\"\r\n                  tappable>\r\n                  <ng-template\r\n                    [ngTemplateOutlet]=\"dayviewInactiveNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: row.eventsGroupByCategory?.get(category)!, time: row.time }, hourParts, category, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n      </ng-container>\r\n    </div>\r\n  </div>\r\n</div>", styles: [".dayview-slide-container .table-fixed{table-layout:fixed}.dayview-slide-container .table{width:100%;max-width:100%;background-color:transparent}.dayview-slide-container .table>thead>tr>th,.dayview-slide-container .table>tbody>tr>th,.dayview-slide-container .table>tfoot>tr>th,.dayview-slide-container .table>thead>tr>td,.dayview-slide-container .table>tbody>tr>td,.dayview-slide-container .table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.dayview-slide-container .table>thead>tr>th{vertical-align:bottom}.dayview-slide-container .table>thead:first-child>tr:first-child>th,.dayview-slide-container .table>thead:first-child>tr:first-child>td{border-top:0}.dayview-slide-container .table>tbody+tbody{border-top:2px solid #ddd}.dayview-slide-container .table-bordered{border:1px solid #ddd}.dayview-slide-container .table-bordered>thead>tr>th,.dayview-slide-container .table-bordered>tbody>tr>th,.dayview-slide-container .table-bordered>tfoot>tr>th,.dayview-slide-container .table-bordered>thead>tr>td,.dayview-slide-container .table-bordered>tbody>tr>td,.dayview-slide-container .table-bordered>tfoot>tr>td{border:1px solid #ddd}.dayview-slide-container .table-bordered>thead>tr>th,.dayview-slide-container .table-bordered>thead>tr>td{border-bottom-width:2px}.dayview-slide-container .table-striped>tbody>tr:nth-child(odd)>td,.dayview-slide-container .table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.dayview-swiper{height:100%}.calendar-cell{padding:0!important;height:37px}.dayview-slide-container{display:block!important}.dayview-category-header{position:relative;font-size:14px}.dayview-category-header-item{font-weight:400;height:37px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.dayview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-top:1px solid #ddd;border-left:1px solid #ddd}[dir=rtl] .dayview-allday-label{border-left:none;border-right:1px solid #ddd;float:right}.dayview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:50px}.dayview-allday-category-wrapper{height:50px;margin-top:-1px}.dayview-allday-content-table{min-height:50px}.dayview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.dayview-normal-event-container{margin-top:50px;overflow:hidden;inset:0;position:absolute;font-size:14px}.dayview-categorized-normal-event-container{margin-top:87px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.dayview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.dayview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.dayview-allday-label{padding-top:4px}.dayview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.dayview-allday-label{line-height:20px}.dayview-allday-content-wrapper{margin-left:31px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"], dependencies: [{ kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: i2.NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }, { kind: "component", type: initPositionScrollComponent, selector: "init-position-scroll", inputs: ["initPosition", "emitEvent"], outputs: ["onScroll"] }], encapsulation: i0.ViewEncapsulation.None }); }
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: DayViewComponent, decorators: [{
             type: Component,
-            args: [{ selector: 'dayview', standalone: false, template: `
-        <swiper #swiper [config]="sliderOptions" [dir]="dir" [allowSlidePrev]="!lockSwipeToPrev" [allowSlideNext]="!lockSwipeToNext" [allowTouchMove]="!lockSwipes" (slideChangeTransitionEnd)="onSlideChanged()" class="slides-container">
-            <ng-template swiperSlide class="slide-container">
-                <div class="dayview-allday-table">
-                    <div class="dayview-allday-label">{{allDayLabel}}</div>
-                    <div class="dayview-allday-content-wrapper scroll-content">
-                        <table class="table table-bordered dayview-allday-content-table">
-                            <tbody>
-                            <tr>
-                                <td class="calendar-cell" [ngClass]="{'calendar-event-wrap':views[0].allDayEvents.length>0}"
-                                    [ngStyle]="{height: 25*views[0].allDayEvents.length+'px'}"
-                                    *ngIf="0===currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[0].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}">
-                                    </ng-template>
-                                </td>
-                                <td class="calendar-cell" *ngIf="0!==currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewInactiveAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[0].allDayEvents}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <init-position-scroll *ngIf="0===currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition" [emitEvent]="preserveScrollPosition"
-                                      (onScroll)="setScrollPosition($event)">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[0].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell" tappable (click)="select(tm.time, tm.events)">
-                                <ng-template [ngTemplateOutlet]="dayviewNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-                <init-position-scroll *ngIf="0!==currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[0].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell">
-                                <ng-template [ngTemplateOutlet]="dayviewInactiveNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <div class="dayview-allday-table">
-                    <div class="dayview-allday-label">{{allDayLabel}}</div>
-                    <div class="dayview-allday-content-wrapper scroll-content">
-                        <table class="table table-bordered dayview-allday-content-table">
-                            <tbody>
-                            <tr>
-                                <td class="calendar-cell" [ngClass]="{'calendar-event-wrap':views[1].allDayEvents.length>0}"
-                                    [ngStyle]="{height: 25*views[1].allDayEvents.length+'px'}"
-                                    *ngIf="1===currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[1].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}">
-                                    </ng-template>
-                                </td>
-                                <td class="calendar-cell" *ngIf="1!==currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewInactiveAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[1].allDayEvents}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <init-position-scroll *ngIf="1===currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition" [emitEvent]="preserveScrollPosition"
-                                      (onScroll)="setScrollPosition($event)">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[1].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell" tappable (click)="select(tm.time, tm.events)">
-                                <ng-template [ngTemplateOutlet]="dayviewNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-                <init-position-scroll *ngIf="1!==currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[1].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell">
-                                <ng-template [ngTemplateOutlet]="dayviewInactiveNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-            </ng-template>
-            <ng-template swiperSlide class="slide-container">
-                <div class="dayview-allday-table">
-                    <div class="dayview-allday-label">{{allDayLabel}}</div>
-                    <div class="dayview-allday-content-wrapper scroll-content">
-                        <table class="table table-bordered dayview-allday-content-table">
-                            <tbody>
-                            <tr>
-                                <td class="calendar-cell" [ngClass]="{'calendar-event-wrap':views[2].allDayEvents.length>0}"
-                                    [ngStyle]="{height: 25*views[2].allDayEvents.length+'px'}"
-                                    *ngIf="2===currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[2].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}">
-                                    </ng-template>
-                                </td>
-                                <td class="calendar-cell" *ngIf="2!==currentViewIndex">
-                                    <ng-template [ngTemplateOutlet]="dayviewInactiveAllDayEventSectionTemplate"
-                                                 [ngTemplateOutletContext]="{allDayEvents:views[2].allDayEvents}">
-                                    </ng-template>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <init-position-scroll *ngIf="2===currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition" [emitEvent]="preserveScrollPosition"
-                                      (onScroll)="setScrollPosition($event)">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[2].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell" tappable (click)="select(tm.time, tm.events)">
-                                <ng-template [ngTemplateOutlet]="dayviewNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-                <init-position-scroll *ngIf="2!==currentViewIndex" class="dayview-normal-event-container"
-                                      [initPosition]="initScrollPosition">
-                    <table class="table table-bordered table-fixed dayview-normal-event-table">
-                        <tbody>
-                        <tr *ngFor="let tm of views[2].rows; let i = index">
-                            <td class="calendar-hour-column text-center">
-                                {{hourColumnLabels[i]}}
-                            </td>
-                            <td class="calendar-cell">
-                                <ng-template [ngTemplateOutlet]="dayviewInactiveNormalEventSectionTemplate"
-                                             [ngTemplateOutletContext]="{tm:tm, hourParts: hourParts}">
-                                </ng-template>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </init-position-scroll>
-            </ng-template>
-        </swiper>
-    `, encapsulation: ViewEncapsulation.None, styles: [".table-fixed{table-layout:fixed}.table{width:100%;max-width:100%;background-color:transparent}.table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,.table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.table>thead>tr>th{vertical-align:bottom;border-bottom:2px solid #ddd}.table>thead:first-child>tr:first-child>th,.table>thead:first-child>tr:first-child>td{border-top:0}.table>tbody+tbody{border-top:2px solid #ddd}.table-bordered{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>tbody>tr>th,.table-bordered>tfoot>tr>th,.table-bordered>thead>tr>td,.table-bordered>tbody>tr>td,.table-bordered>tfoot>tr>td{border:1px solid #ddd}.table-bordered>thead>tr>th,.table-bordered>thead>tr>td{border-bottom-width:2px}.table-striped>tbody>tr:nth-child(odd)>td,.table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.slides-container{height:100%}.slide-container{display:block!important}.calendar-cell{padding:0!important;height:37px}.dayview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-left:1px solid #ddd}[dir=rtl] .dayview-allday-label{border-right:1px solid #ddd;float:right}.dayview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:50px}.dayview-allday-content-table{min-height:50px}.dayview-allday-content-table td{border-left:1px solid #ddd;border-right:1px solid #ddd}.dayview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.dayview-normal-event-container{margin-top:50px;overflow:hidden;inset:0;position:absolute;font-size:14px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.dayview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.dayview-allday-label{padding-top:4px}.table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.dayview-allday-label{line-height:20px}.dayview-allday-content-wrapper{margin-left:31px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"] }]
-        }], ctorParameters: () => [{ type: CalendarService }, { type: i0.ElementRef }, { type: i0.NgZone }], propDecorators: { class: [{
+            args: [{ selector: 'dayview', encapsulation: ViewEncapsulation.None, standalone: false, template: "<div class=\"swiper dayview-swiper\" #dayViewSwiper>\r\n  <div class=\"swiper-wrapper slides-container\" [dir]=\"dir\">\r\n    <div *ngFor=\"let sliderIndex of sliderIndexList\" class=\"swiper-slide slide-container dayview-slide-container\">\r\n      <ng-container *ngIf=\"!dayviewShowCategoryView\">\r\n        <div class=\"dayview-allday-table\">\r\n          <div class=\"dayview-allday-label\">{{allDayLabel}}</div>\r\n          <div class=\"dayview-allday-content-wrapper scroll-content\">\r\n            <table class=\"table table-bordered dayview-allday-content-table\">\r\n              <tbody>\r\n                <tr>\r\n                  <td *ngIf=\"sliderIndex===currentViewIndex\" class=\"calendar-cell\"\r\n                    [ngClass]=\"{'calendar-event-wrap':views[sliderIndex].allDayEvents.length>0}\"\r\n                    [ngStyle]=\"{height: 25*views[sliderIndex].allDayEvents.length+'px'}\">\r\n                    <ng-template [ngTemplateOutlet]=\"dayviewAllDayEventSectionTemplate\"\r\n                      [ngTemplateOutletContext]=\"{allDayEvents:views[sliderIndex].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}\">\r\n                    </ng-template>\r\n                  </td>\r\n                  <td *ngIf=\"sliderIndex!==currentViewIndex\" class=\"calendar-cell\"\r\n                    [ngClass]=\"{'calendar-event-wrap':views[sliderIndex].allDayEvents.length>0}\"\r\n                    [ngStyle]=\"{height: 25*views[sliderIndex].allDayEvents.length+'px'}\">\r\n                    <ng-template [ngTemplateOutlet]=\"dayviewInactiveAllDayEventSectionTemplate\"\r\n                      [ngTemplateOutletContext]=\"{allDayEvents:views[sliderIndex].allDayEvents,eventTemplate:dayviewAllDayEventTemplate}\">\r\n                    </ng-template>\r\n                  </td>\r\n                </tr>\r\n              </tbody>\r\n            </table>\r\n          </div>\r\n        </div>\r\n        <init-position-scroll *ngIf=\"sliderIndex===currentViewIndex\" class=\"dayview-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\" [emitEvent]=\"preserveScrollPosition\"\r\n          (onScroll)=\"setScrollPosition($event)\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let tm of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{hourColumnLabels[i]}}\r\n                </td>\r\n                <td class=\"calendar-cell\" tappable (click)=\"select(tm)\">\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n        <init-position-scroll *ngIf=\"sliderIndex!==currentViewIndex\" class=\"dayview-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let tm of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{hourColumnLabels[i]}}\r\n                </td>\r\n                <td class=\"calendar-cell\">\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewInactiveNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm:tm, hourParts: hourParts, eventTemplate:dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n      </ng-container>\r\n\r\n      <ng-container *ngIf=\"dayviewShowCategoryView\">\r\n        <div class=\"dayview-category-header\">\r\n          <table class=\"table table-fixed table-bordered dayview-category-header-table\">\r\n            <thead>\r\n              <tr>\r\n                <th class=\"dayview-category-header-item calendar-hour-column\"></th>\r\n                <th *ngFor=\"let category of dayviewCategorySource\" class=\"dayview-category-header-item\">\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewCategoryItemTemplate\" [ngTemplateOutletContext]=\"{category}\">\r\n                  </ng-template>\r\n                </th>\r\n              </tr>\r\n            </thead>\r\n          </table>\r\n        </div>\r\n\r\n        <div class=\"dayview-allday-table\">\r\n          <div class=\"dayview-allday-label\">{{ allDayLabel }}</div>\r\n          <div class=\"dayview-allday-content-wrapper dayview-allday-category-wrapper scroll-content\">\r\n            <table class=\"table table-fixed table-bordered dayview-allday-content-table\">\r\n              <tbody>\r\n                <tr>\r\n                  <td class=\"calendar-cell\" *ngFor=\"let category of dayviewCategorySource\">\r\n                    <div class=\"calendar-event-wrap\">\r\n                      <ng-template *ngIf=\"sliderIndex === currentViewIndex\"\r\n                        [ngTemplateOutlet]=\"dayviewAllDayEventSectionTemplate\"\r\n                        [ngTemplateOutletContext]=\"{allDayEvents: views[currentViewIndex].categorizedAllDayEventsMap.get(category)!, eventTemplate: dayviewAllDayEventTemplate}\">\r\n                      </ng-template>\r\n                      <ng-template *ngIf=\"sliderIndex !== currentViewIndex \"\r\n                        [ngTemplateOutlet]=\"dayviewInactiveAllDayEventSectionTemplate\"\r\n                        [ngTemplateOutletContext]=\"{allDayEvents: views[currentViewIndex].categorizedAllDayEventsMap.get(category)!, eventTemplate: dayviewAllDayEventTemplate}\">\r\n                      </ng-template>\r\n                    </div>\r\n                  </td>\r\n                </tr>\r\n              </tbody>\r\n            </table>\r\n          </div>\r\n        </div>\r\n        <init-position-scroll *ngIf=\"sliderIndex === currentViewIndex\"\r\n          class=\"dayview-normal-event-container dayview-categorized-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\" [emitEvent]=\"preserveScrollPosition\"\r\n          (onScroll)=\"setScrollPosition($event)\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{ hourColumnLabels[i] }}\r\n                </td>\r\n                <td *ngIf=\"dayviewCategorySource?.size === 0\" class=\"calendar-cell\" (click)=\"select(row)\" tappable>\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: [], time: row.time }, hourParts, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n                <td *ngFor=\"let category of dayviewCategorySource\" class=\"calendar-cell\" (click)=\"select(row, category)\"\r\n                  tappable>\r\n                  <ng-template\r\n                    [ngTemplateOutlet]=\"dayviewNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: row.eventsGroupByCategory?.get(category)!, time: row.time }, hourParts, category, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n\r\n        <init-position-scroll *ngIf=\"sliderIndex !== currentViewIndex\"\r\n          class=\"dayview-normal-event-container dayview-categorized-normal-event-container\"\r\n          [initPosition]=\"initScrollPosition\">\r\n          <table class=\"table table-bordered table-fixed dayview-normal-event-table\">\r\n            <tbody>\r\n              <tr *ngFor=\"let row of views[sliderIndex].rows; let i = index\">\r\n                <td class=\"calendar-hour-column text-center\">\r\n                  {{ hourColumnLabels[i] }}\r\n                </td>\r\n                <td *ngIf=\"dayviewCategorySource?.size === 0\" class=\"calendar-cell\" (click)=\"select(row)\" tappable>\r\n                  <ng-template [ngTemplateOutlet]=\"dayviewInactiveNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: [], time: row.time }, hourParts, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n                <td *ngFor=\"let category of dayviewCategorySource\" class=\"calendar-cell\" (click)=\"select(row, category)\"\r\n                  tappable>\r\n                  <ng-template\r\n                    [ngTemplateOutlet]=\"dayviewInactiveNormalEventSectionTemplate\"\r\n                    [ngTemplateOutletContext]=\"{tm: { events: row.eventsGroupByCategory?.get(category)!, time: row.time }, hourParts, category, eventTemplate: dayviewNormalEventTemplate}\">\r\n                  </ng-template>\r\n                </td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </init-position-scroll>\r\n      </ng-container>\r\n    </div>\r\n  </div>\r\n</div>", styles: [".dayview-slide-container .table-fixed{table-layout:fixed}.dayview-slide-container .table{width:100%;max-width:100%;background-color:transparent}.dayview-slide-container .table>thead>tr>th,.dayview-slide-container .table>tbody>tr>th,.dayview-slide-container .table>tfoot>tr>th,.dayview-slide-container .table>thead>tr>td,.dayview-slide-container .table>tbody>tr>td,.dayview-slide-container .table>tfoot>tr>td{padding:8px;line-height:20px;vertical-align:top}.dayview-slide-container .table>thead>tr>th{vertical-align:bottom}.dayview-slide-container .table>thead:first-child>tr:first-child>th,.dayview-slide-container .table>thead:first-child>tr:first-child>td{border-top:0}.dayview-slide-container .table>tbody+tbody{border-top:2px solid #ddd}.dayview-slide-container .table-bordered{border:1px solid #ddd}.dayview-slide-container .table-bordered>thead>tr>th,.dayview-slide-container .table-bordered>tbody>tr>th,.dayview-slide-container .table-bordered>tfoot>tr>th,.dayview-slide-container .table-bordered>thead>tr>td,.dayview-slide-container .table-bordered>tbody>tr>td,.dayview-slide-container .table-bordered>tfoot>tr>td{border:1px solid #ddd}.dayview-slide-container .table-bordered>thead>tr>th,.dayview-slide-container .table-bordered>thead>tr>td{border-bottom-width:2px}.dayview-slide-container .table-striped>tbody>tr:nth-child(odd)>td,.dayview-slide-container .table-striped>tbody>tr:nth-child(odd)>th{background-color:#f9f9f9}.calendar-hour-column{width:50px;white-space:nowrap}.calendar-event-wrap{position:relative;width:100%;height:100%}.calendar-event{position:absolute;padding:2px;cursor:pointer;z-index:10000}.dayview-swiper{height:100%}.calendar-cell{padding:0!important;height:37px}.dayview-slide-container{display:block!important}.dayview-category-header{position:relative;font-size:14px}.dayview-category-header-item{font-weight:400;height:37px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.dayview-allday-label{float:left;height:100%;line-height:50px;text-align:center;width:50px;border-top:1px solid #ddd;border-left:1px solid #ddd}[dir=rtl] .dayview-allday-label{border-left:none;border-right:1px solid #ddd;float:right}.dayview-allday-content-wrapper{margin-left:50px;overflow:hidden;height:51px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:50px}.dayview-allday-category-wrapper{height:50px;margin-top:-1px}.dayview-allday-content-table{min-height:50px}.dayview-allday-table{height:50px;position:relative;border-bottom:1px solid #ddd;font-size:14px}.dayview-normal-event-container{margin-top:50px;overflow:hidden;inset:0;position:absolute;font-size:14px}.dayview-categorized-normal-event-container{margin-top:87px}.scroll-content{overflow-y:auto;overflow-x:hidden}::-webkit-scrollbar,*::-webkit-scrollbar{display:none}.dayview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle}@media(max-width:750px){.dayview-allday-label,.calendar-hour-column{width:31px;font-size:12px}.dayview-allday-label{padding-top:4px}.dayview-slide-container .table>tbody>tr>td.calendar-hour-column{padding-left:0;padding-right:0;vertical-align:middle;line-height:12px}.dayview-allday-label{line-height:20px}.dayview-allday-content-wrapper{margin-left:31px}[dir=rtl] .dayview-allday-content-wrapper{margin-left:0;margin-right:31px}}\n"] }]
+        }], ctorParameters: () => [{ type: CalendarService }, { type: i0.ElementRef }, { type: i0.NgZone }], propDecorators: { swiperElement: [{
+                type: ViewChild,
+                args: ['dayViewSwiper']
+            }], class: [{
                 type: HostBinding,
                 args: ['class.dayview']
-            }], slider: [{
-                type: ViewChild,
-                args: ['swiper', { static: false }]
+            }], dayviewCategoryItemTemplate: [{
+                type: Input
             }], dayviewAllDayEventTemplate: [{
                 type: Input
             }], dayviewNormalEventTemplate: [{
@@ -3054,6 +1930,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
             }], sliderOptions: [{
                 type: Input
             }], hourSegments: [{
+                type: Input
+            }], dayviewCategorySource: [{
+                type: Input
+            }], dayviewShowCategoryView: [{
                 type: Input
             }], onRangeChanged: [{
                 type: Output
@@ -3116,6 +1996,7 @@ class CalendarComponent {
         this.locale = "";
         this.startHour = 0;
         this.endHour = 24;
+        this.dayviewShowCategoryView = false;
         this.onCurrentDateChanged = new EventEmitter();
         this.onRangeChanged = new EventEmitter();
         this.onEventSelected = new EventEmitter();
@@ -3186,327 +2067,11 @@ class CalendarComponent {
         this.calendarService.update();
     }
     static { this.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: CalendarComponent, deps: [{ token: CalendarService }, { token: LOCALE_ID }, { token: i0.NgZone }], target: i0.ɵɵFactoryTarget.Component }); }
-    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: CalendarComponent, isStandalone: false, selector: "calendar", inputs: { currentDate: "currentDate", eventSource: "eventSource", calendarMode: "calendarMode", formatDay: "formatDay", formatDayHeader: "formatDayHeader", formatDayTitle: "formatDayTitle", formatWeekTitle: "formatWeekTitle", formatMonthTitle: "formatMonthTitle", formatWeekViewDayHeader: "formatWeekViewDayHeader", formatHourColumn: "formatHourColumn", showEventDetail: "showEventDetail", startingDayMonth: "startingDayMonth", startingDayWeek: "startingDayWeek", allDayLabel: "allDayLabel", noEventsLabel: "noEventsLabel", queryMode: "queryMode", step: "step", timeInterval: "timeInterval", autoSelect: "autoSelect", markDisabled: "markDisabled", monthviewDisplayEventTemplate: "monthviewDisplayEventTemplate", monthviewInactiveDisplayEventTemplate: "monthviewInactiveDisplayEventTemplate", monthviewEventDetailTemplate: "monthviewEventDetailTemplate", weekviewHeaderTemplate: "weekviewHeaderTemplate", weekviewAllDayEventTemplate: "weekviewAllDayEventTemplate", weekviewNormalEventTemplate: "weekviewNormalEventTemplate", dayviewAllDayEventTemplate: "dayviewAllDayEventTemplate", dayviewNormalEventTemplate: "dayviewNormalEventTemplate", weekviewAllDayEventSectionTemplate: "weekviewAllDayEventSectionTemplate", weekviewNormalEventSectionTemplate: "weekviewNormalEventSectionTemplate", dayviewAllDayEventSectionTemplate: "dayviewAllDayEventSectionTemplate", dayviewNormalEventSectionTemplate: "dayviewNormalEventSectionTemplate", weekviewInactiveAllDayEventSectionTemplate: "weekviewInactiveAllDayEventSectionTemplate", weekviewInactiveNormalEventSectionTemplate: "weekviewInactiveNormalEventSectionTemplate", dayviewInactiveAllDayEventSectionTemplate: "dayviewInactiveAllDayEventSectionTemplate", dayviewInactiveNormalEventSectionTemplate: "dayviewInactiveNormalEventSectionTemplate", dateFormatter: "dateFormatter", dir: "dir", scrollToHour: "scrollToHour", preserveScrollPosition: "preserveScrollPosition", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", locale: "locale", startHour: "startHour", endHour: "endHour", sliderOptions: "sliderOptions" }, outputs: { onCurrentDateChanged: "onCurrentDateChanged", onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onDayHeaderSelected: "onDayHeaderSelected", onTitleChanged: "onTitleChanged" }, providers: [CalendarService], ngImport: i0, template: `
-        <ng-template #monthviewDefaultDisplayEventTemplate let-view="view" let-row="row" let-col="col">
-            {{view.dates[row*7+col].label}}
-        </ng-template>
-        <ng-template #monthviewDefaultEventDetailTemplate let-showEventDetail="showEventDetail" let-selectedDate="selectedDate" let-noEventsLabel="noEventsLabel">
-            <ion-list class="event-detail-container" has-bouncing="false" *ngIf="showEventDetail" overflow-scroll="false">
-                <ion-item *ngFor="let event of selectedDate?.events" (click)="eventSelected(event)">
-                        <span *ngIf="!event.allDay" class="monthview-eventdetail-timecolumn">{{event.startTime|date: 'HH:mm'}}
-                            -
-                            {{event.endTime|date: 'HH:mm'}}
-                        </span>
-                    <span *ngIf="event.allDay" class="monthview-eventdetail-timecolumn">{{allDayLabel}}</span>
-                    <span class="event-detail">  |  {{event.title}}</span>
-                </ion-item>
-                <ion-item *ngIf="selectedDate?.events.length==0">
-                    <div class="no-events-label">{{noEventsLabel}}</div>
-                </ion-item>
-            </ion-list>
-        </ng-template>
-        <ng-template #defaultWeekviewHeaderTemplate let-viewDate="viewDate">
-            {{ viewDate.dayHeader }}
-        </ng-template>
-        <ng-template #defaultAllDayEventTemplate let-displayEvent="displayEvent">
-            <div class="calendar-event-inner">{{displayEvent.event.title}}</div>
-        </ng-template>
-        <ng-template #defaultNormalEventTemplate let-displayEvent="displayEvent">
-            <div class="calendar-event-inner">{{displayEvent.event.title}}</div>
-        </ng-template>
-        <ng-template #defaultWeekViewAllDayEventSectionTemplate let-day="day" let-eventTemplate="eventTemplate">
-            <div [ngClass]="{'calendar-event-wrap': day.events}" *ngIf="day.events"
-                 [ngStyle]="{height: 25*day.events.length+'px'}">
-                <div *ngFor="let displayEvent of day.events" class="calendar-event" tappable
-                     (click)="eventSelected(displayEvent.event)"
-                     [ngStyle]="{top: 25*displayEvent.position+'px', width: 100*(displayEvent.endIndex-displayEvent.startIndex)+'%', height: '25px'}">
-                    <ng-template [ngTemplateOutlet]="eventTemplate"
-                                 [ngTemplateOutletContext]="{displayEvent:displayEvent}">
-                    </ng-template>
-                </div>
-            </div>
-        </ng-template>
-        <ng-template #defaultDayViewAllDayEventSectionTemplate let-allDayEvents="allDayEvents" let-eventTemplate="eventTemplate">
-            <div *ngFor="let displayEvent of allDayEvents; let eventIndex=index"
-                 class="calendar-event" tappable
-                 (click)="eventSelected(displayEvent.event)"
-                 [ngStyle]="{top: 25*eventIndex+'px',width: '100%',height:'25px'}">
-                <ng-template [ngTemplateOutlet]="eventTemplate"
-                             [ngTemplateOutletContext]="{displayEvent:displayEvent}">
-                </ng-template>
-            </div>
-        </ng-template>
-        <ng-template #defaultNormalEventSectionTemplate let-tm="tm" let-hourParts="hourParts" let-eventTemplate="eventTemplate">
-            <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                <div *ngFor="let displayEvent of tm.events" class="calendar-event" tappable
-                     (click)="eventSelected(displayEvent.event)"
-                     [ngStyle]="{top: (37*displayEvent.startOffset/hourParts)+'px',left: 100/displayEvent.overlapNumber*displayEvent.position+'%', width: 100/displayEvent.overlapNumber+'%', height: 37*(displayEvent.endIndex -displayEvent.startIndex - (displayEvent.endOffset + displayEvent.startOffset)/hourParts)+'px'}">
-                    <ng-template [ngTemplateOutlet]="eventTemplate"
-                                 [ngTemplateOutletContext]="{displayEvent:displayEvent}">
-                    </ng-template>
-                </div>
-            </div>
-        </ng-template>
-        <ng-template #defaultInactiveAllDayEventSectionTemplate>
-        </ng-template>
-        <ng-template #defaultInactiveNormalEventSectionTemplate>
-        </ng-template>
-
-        <div [ngSwitch]="calendarMode" class="{{calendarMode}}view-container">
-            <monthview *ngSwitchCase="'month'"
-                [formatDay]="formatDay"
-                [formatDayHeader]="formatDayHeader"
-                [formatMonthTitle]="formatMonthTitle"
-                [startingDayMonth]="startingDayMonth"
-                [showEventDetail]="showEventDetail"
-                [noEventsLabel]="noEventsLabel"
-                [autoSelect]="autoSelect"
-                [eventSource]="eventSource"
-                [markDisabled]="markDisabled"
-                [monthviewDisplayEventTemplate]="monthviewDisplayEventTemplate||monthviewDefaultDisplayEventTemplate"
-                [monthviewInactiveDisplayEventTemplate]="monthviewInactiveDisplayEventTemplate||monthviewDefaultDisplayEventTemplate"
-                [monthviewEventDetailTemplate]="monthviewEventDetailTemplate||monthviewDefaultEventDetailTemplate"
-                [locale]="locale"
-                [dateFormatter]="dateFormatter"
-                [dir]="dir"
-                [lockSwipeToPrev]="lockSwipeToPrev"
-                [lockSwipeToNext]="lockSwipeToNext"
-                [lockSwipes]="lockSwipes"
-                [sliderOptions]="sliderOptions"
-                (onRangeChanged)="rangeChanged($event)"
-                (onEventSelected)="eventSelected($event)"
-                (onTimeSelected)="timeSelected($event)"
-                (onTitleChanged)="titleChanged($event)">
-            </monthview>
-            <weekview *ngSwitchCase="'week'"
-                [formatWeekTitle]="formatWeekTitle"
-                [formatWeekViewDayHeader]="formatWeekViewDayHeader"
-                [formatHourColumn]="formatHourColumn"
-                [startingDayWeek]="startingDayWeek"
-                [allDayLabel]="allDayLabel"
-                [hourParts]="hourParts"
-                [autoSelect]="autoSelect"
-                [hourSegments]="hourSegments"
-                [eventSource]="eventSource"
-                [markDisabled]="markDisabled"
-                [weekviewHeaderTemplate]="weekviewHeaderTemplate||defaultWeekviewHeaderTemplate"
-                [weekviewAllDayEventTemplate]="weekviewAllDayEventTemplate||defaultAllDayEventTemplate"
-                [weekviewNormalEventTemplate]="weekviewNormalEventTemplate||defaultNormalEventTemplate"
-                [weekviewAllDayEventSectionTemplate]="weekviewAllDayEventSectionTemplate||defaultWeekViewAllDayEventSectionTemplate"
-                [weekviewNormalEventSectionTemplate]="weekviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate"
-                [weekviewInactiveAllDayEventSectionTemplate]="weekviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate"
-                [weekviewInactiveNormalEventSectionTemplate]="weekviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate"
-                [locale]="locale"
-                [dateFormatter]="dateFormatter"
-                [dir]="dir"
-                [scrollToHour]="scrollToHour"
-                [preserveScrollPosition]="preserveScrollPosition"
-                [lockSwipeToPrev]="lockSwipeToPrev"
-                [lockSwipeToNext]="lockSwipeToNext"
-                [lockSwipes]="lockSwipes"
-                [startHour]="startHour"
-                [endHour]="endHour"
-                [sliderOptions]="sliderOptions"
-                (onRangeChanged)="rangeChanged($event)"
-                (onEventSelected)="eventSelected($event)"
-                (onDayHeaderSelected)="daySelected($event)"
-                (onTimeSelected)="timeSelected($event)"
-                (onTitleChanged)="titleChanged($event)">
-            </weekview>
-            <dayview *ngSwitchCase="'day'"
-                [formatDayTitle]="formatDayTitle"
-                [formatHourColumn]="formatHourColumn"
-                [allDayLabel]="allDayLabel"
-                [hourParts]="hourParts"
-                [hourSegments]="hourSegments"
-                [eventSource]="eventSource"
-                [markDisabled]="markDisabled"
-                [dayviewAllDayEventTemplate]="dayviewAllDayEventTemplate||defaultAllDayEventTemplate"
-                [dayviewNormalEventTemplate]="dayviewNormalEventTemplate||defaultNormalEventTemplate"
-                [dayviewAllDayEventSectionTemplate]="dayviewAllDayEventSectionTemplate||defaultDayViewAllDayEventSectionTemplate"
-                [dayviewNormalEventSectionTemplate]="dayviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate"
-                [dayviewInactiveAllDayEventSectionTemplate]="dayviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate"
-                [dayviewInactiveNormalEventSectionTemplate]="dayviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate"
-                [locale]="locale"
-                [dateFormatter]="dateFormatter"
-                [dir]="dir"
-                [scrollToHour]="scrollToHour"
-                [preserveScrollPosition]="preserveScrollPosition"
-                [lockSwipeToPrev]="lockSwipeToPrev"
-                [lockSwipeToNext]="lockSwipeToNext"
-                [lockSwipes]="lockSwipes"
-                [startHour]="startHour"
-                [endHour]="endHour"
-                [sliderOptions]="sliderOptions"
-                (onRangeChanged)="rangeChanged($event)"
-                (onEventSelected)="eventSelected($event)"
-                (onTimeSelected)="timeSelected($event)"
-                (onTitleChanged)="titleChanged($event)">
-            </dayview>
-        </div>
-    `, isInline: true, styles: [":host>div{height:100%}.event-detail-container{border-top:2px darkgrey solid}.no-events-label{font-weight:700;color:#a9a9a9;text-align:center}.event-detail{cursor:pointer;white-space:nowrap;text-overflow:ellipsis}.monthview-eventdetail-timecolumn{width:110px;overflow:hidden}.calendar-event-inner{overflow:hidden;background-color:#3a87ad;color:#fff;height:100%;width:100%;padding:2px;line-height:15px;text-align:initial}@media(max-width:750px){.calendar-event-inner{font-size:12px}}\n"], dependencies: [{ kind: "component", type: i2$1.IonItem, selector: "ion-item", inputs: ["button", "color", "detail", "detailIcon", "disabled", "download", "href", "lines", "mode", "rel", "routerAnimation", "routerDirection", "target", "type"] }, { kind: "component", type: i2$1.IonList, selector: "ion-list", inputs: ["inset", "lines", "mode"] }, { kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: i2.NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }, { kind: "directive", type: i2.NgSwitch, selector: "[ngSwitch]", inputs: ["ngSwitch"] }, { kind: "directive", type: i2.NgSwitchCase, selector: "[ngSwitchCase]", inputs: ["ngSwitchCase"] }, { kind: "component", type: MonthViewComponent, selector: "monthview", inputs: ["monthviewDisplayEventTemplate", "monthviewInactiveDisplayEventTemplate", "monthviewEventDetailTemplate", "formatDay", "formatDayHeader", "formatMonthTitle", "eventSource", "startingDayMonth", "showEventDetail", "noEventsLabel", "autoSelect", "markDisabled", "locale", "dateFormatter", "dir", "lockSwipeToPrev", "lockSwipeToNext", "lockSwipes", "sliderOptions"], outputs: ["onRangeChanged", "onEventSelected", "onTimeSelected", "onTitleChanged"] }, { kind: "component", type: WeekViewComponent, selector: "weekview", inputs: ["weekviewHeaderTemplate", "weekviewAllDayEventTemplate", "weekviewNormalEventTemplate", "weekviewAllDayEventSectionTemplate", "weekviewNormalEventSectionTemplate", "weekviewInactiveAllDayEventSectionTemplate", "weekviewInactiveNormalEventSectionTemplate", "formatWeekTitle", "formatWeekViewDayHeader", "formatHourColumn", "startingDayWeek", "allDayLabel", "hourParts", "eventSource", "autoSelect", "markDisabled", "locale", "dateFormatter", "dir", "scrollToHour", "preserveScrollPosition", "lockSwipeToPrev", "lockSwipeToNext", "lockSwipes", "startHour", "endHour", "sliderOptions", "hourSegments"], outputs: ["onRangeChanged", "onEventSelected", "onTimeSelected", "onDayHeaderSelected", "onTitleChanged"] }, { kind: "component", type: DayViewComponent, selector: "dayview", inputs: ["dayviewAllDayEventTemplate", "dayviewNormalEventTemplate", "dayviewAllDayEventSectionTemplate", "dayviewNormalEventSectionTemplate", "dayviewInactiveAllDayEventSectionTemplate", "dayviewInactiveNormalEventSectionTemplate", "formatHourColumn", "formatDayTitle", "allDayLabel", "hourParts", "eventSource", "markDisabled", "locale", "dateFormatter", "dir", "scrollToHour", "preserveScrollPosition", "lockSwipeToPrev", "lockSwipeToNext", "lockSwipes", "startHour", "endHour", "sliderOptions", "hourSegments"], outputs: ["onRangeChanged", "onEventSelected", "onTimeSelected", "onTitleChanged"] }, { kind: "pipe", type: i2.DatePipe, name: "date" }] }); }
+    static { this.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "21.2.25", type: CalendarComponent, isStandalone: false, selector: "calendar", inputs: { currentDate: "currentDate", eventSource: "eventSource", calendarMode: "calendarMode", formatDay: "formatDay", formatDayHeader: "formatDayHeader", formatDayTitle: "formatDayTitle", formatWeekTitle: "formatWeekTitle", formatMonthTitle: "formatMonthTitle", formatWeekViewDayHeader: "formatWeekViewDayHeader", formatHourColumn: "formatHourColumn", showEventDetail: "showEventDetail", startingDayMonth: "startingDayMonth", startingDayWeek: "startingDayWeek", allDayLabel: "allDayLabel", noEventsLabel: "noEventsLabel", queryMode: "queryMode", step: "step", timeInterval: "timeInterval", autoSelect: "autoSelect", markDisabled: "markDisabled", monthviewDisplayEventTemplate: "monthviewDisplayEventTemplate", monthviewInactiveDisplayEventTemplate: "monthviewInactiveDisplayEventTemplate", monthviewEventDetailTemplate: "monthviewEventDetailTemplate", weekviewHeaderTemplate: "weekviewHeaderTemplate", weekviewAllDayEventTemplate: "weekviewAllDayEventTemplate", weekviewNormalEventTemplate: "weekviewNormalEventTemplate", dayviewCategoryItemTemplate: "dayviewCategoryItemTemplate", dayviewAllDayEventTemplate: "dayviewAllDayEventTemplate", dayviewNormalEventTemplate: "dayviewNormalEventTemplate", weekviewAllDayEventSectionTemplate: "weekviewAllDayEventSectionTemplate", weekviewNormalEventSectionTemplate: "weekviewNormalEventSectionTemplate", dayviewAllDayEventSectionTemplate: "dayviewAllDayEventSectionTemplate", dayviewNormalEventSectionTemplate: "dayviewNormalEventSectionTemplate", weekviewInactiveAllDayEventSectionTemplate: "weekviewInactiveAllDayEventSectionTemplate", weekviewInactiveNormalEventSectionTemplate: "weekviewInactiveNormalEventSectionTemplate", dayviewInactiveAllDayEventSectionTemplate: "dayviewInactiveAllDayEventSectionTemplate", dayviewInactiveNormalEventSectionTemplate: "dayviewInactiveNormalEventSectionTemplate", dateFormatter: "dateFormatter", dir: "dir", scrollToHour: "scrollToHour", preserveScrollPosition: "preserveScrollPosition", lockSwipeToPrev: "lockSwipeToPrev", lockSwipeToNext: "lockSwipeToNext", lockSwipes: "lockSwipes", locale: "locale", startHour: "startHour", endHour: "endHour", sliderOptions: "sliderOptions", dayviewCategorySource: "dayviewCategorySource", dayviewShowCategoryView: "dayviewShowCategoryView" }, outputs: { onCurrentDateChanged: "onCurrentDateChanged", onRangeChanged: "onRangeChanged", onEventSelected: "onEventSelected", onTimeSelected: "onTimeSelected", onDayHeaderSelected: "onDayHeaderSelected", onTitleChanged: "onTitleChanged" }, providers: [CalendarService], ngImport: i0, template: "<ng-template #monthviewDefaultDisplayEventTemplate let-view=\"view\" let-row=\"row\" let-col=\"col\">\r\n    {{view.dates[row*7+col].label}}\r\n</ng-template>\r\n<ng-template #monthviewDefaultEventDetailTemplate let-showEventDetail=\"showEventDetail\" let-selectedDate=\"selectedDate\"\r\n    let-noEventsLabel=\"noEventsLabel\">\r\n    <ion-list class=\"event-detail-container\" has-bouncing=\"false\" *ngIf=\"showEventDetail\" overflow-scroll=\"false\">\r\n        <ion-item *ngFor=\"let event of selectedDate?.events\" (click)=\"eventSelected(event)\">\r\n            <span *ngIf=\"!event.allDay\" class=\"monthview-eventdetail-timecolumn\">{{event.startTime|date: 'HH:mm'}}\r\n                -\r\n                {{event.endTime|date: 'HH:mm'}}\r\n            </span>\r\n            <span *ngIf=\"event.allDay\" class=\"monthview-eventdetail-timecolumn\">{{allDayLabel}}</span>\r\n            <span class=\"event-detail\"> | {{event.title}} </span>\r\n            <span class=\"event-detail event-category-detail\" *ngIf=\"event.categoryId\">[{{event.categoryName}}]</span>\r\n        </ion-item>\r\n        <ion-item *ngIf=\"selectedDate?.events.length==0\">\r\n            <div class=\"no-events-label\">{{noEventsLabel}}</div>\r\n        </ion-item>\r\n    </ion-list>\r\n</ng-template>\r\n<ng-template #defaultWeekviewHeaderTemplate let-viewDate=\"viewDate\">\r\n    {{ viewDate.dayHeader }}\r\n</ng-template>\r\n<ng-template #defaultCategoryItemTemplate let-category=\"category\">\r\n    {{ category }}\r\n</ng-template>\r\n<ng-template #defaultAllDayEventTemplate let-displayEvent=\"displayEvent\">\r\n    <div class=\"calendar-event-inner\">{{displayEvent.event.title}}</div>\r\n</ng-template>\r\n<ng-template #defaultNormalEventTemplate let-displayEvent=\"displayEvent\">\r\n    <div class=\"calendar-event-inner\">{{displayEvent.event.title}}</div>\r\n</ng-template>\r\n<ng-template #defaultWeekViewAllDayEventSectionTemplate let-day=\"day\" let-eventTemplate=\"eventTemplate\">\r\n    <div [ngClass]=\"{'calendar-event-wrap': day.events}\" *ngIf=\"day.events\"\r\n        [ngStyle]=\"{height: 25*day.events.length+'px'}\">\r\n        <div *ngFor=\"let displayEvent of day.events\" class=\"calendar-event\" tappable\r\n            (click)=\"eventSelected(displayEvent.event)\"\r\n            [ngStyle]=\"{top: 25*displayEvent.position+'px', width: 100*(displayEvent.endIndex-displayEvent.startIndex)+'%', height: '25px'}\">\r\n            <ng-template [ngTemplateOutlet]=\"eventTemplate\" [ngTemplateOutletContext]=\"{displayEvent:displayEvent}\">\r\n            </ng-template>\r\n        </div>\r\n    </div>\r\n</ng-template>\r\n<ng-template #defaultDayViewAllDayEventSectionTemplate let-allDayEvents=\"allDayEvents\"\r\n    let-eventTemplate=\"eventTemplate\">\r\n    <div *ngFor=\"let displayEvent of allDayEvents; let eventIndex=index\" class=\"calendar-event\" tappable\r\n        (click)=\"eventSelected(displayEvent.event)\" [ngStyle]=\"{top: 25*eventIndex+'px',width: '100%',height:'25px'}\">\r\n        <ng-template [ngTemplateOutlet]=\"eventTemplate\" [ngTemplateOutletContext]=\"{displayEvent:displayEvent}\">\r\n        </ng-template>\r\n    </div>\r\n</ng-template>\r\n<ng-template #defaultNormalEventSectionTemplate let-tm=\"tm\" let-hourParts=\"hourParts\" let-eventTemplate=\"eventTemplate\">\r\n    <div [ngClass]=\"{'calendar-event-wrap': tm.events}\" *ngIf=\"tm.events\">\r\n        <div *ngFor=\"let displayEvent of tm.events\" class=\"calendar-event\" tappable\r\n            (click)=\"eventSelected(displayEvent.event)\"\r\n            [ngStyle]=\"{top: (37*displayEvent.startOffset/hourParts)+'px',left: 100/displayEvent.overlapNumber*displayEvent.position+'%', width: 100/displayEvent.overlapNumber+'%', height: 37*(displayEvent.endIndex -displayEvent.startIndex - (displayEvent.endOffset + displayEvent.startOffset)/hourParts)+'px'}\">\r\n            <ng-template [ngTemplateOutlet]=\"eventTemplate\" [ngTemplateOutletContext]=\"{displayEvent:displayEvent}\">\r\n            </ng-template>\r\n        </div>\r\n    </div>\r\n</ng-template>\r\n<ng-template #defaultInactiveAllDayEventSectionTemplate>\r\n</ng-template>\r\n<ng-template #defaultInactiveNormalEventSectionTemplate>\r\n</ng-template>\r\n\r\n<div [ngSwitch]=\"calendarMode\" class=\"{{calendarMode}}view-container\">\r\n    <monthview *ngSwitchCase=\"'month'\" [formatDay]=\"formatDay\" [formatDayHeader]=\"formatDayHeader\"\r\n        [formatMonthTitle]=\"formatMonthTitle\" [startingDayMonth]=\"startingDayMonth\" [showEventDetail]=\"showEventDetail\"\r\n        [noEventsLabel]=\"noEventsLabel\" [autoSelect]=\"autoSelect\" [eventSource]=\"eventSource\"\r\n        [markDisabled]=\"markDisabled\"\r\n        [monthviewDisplayEventTemplate]=\"monthviewDisplayEventTemplate||monthviewDefaultDisplayEventTemplate\"\r\n        [monthviewInactiveDisplayEventTemplate]=\"monthviewInactiveDisplayEventTemplate||monthviewDefaultDisplayEventTemplate\"\r\n        [monthviewEventDetailTemplate]=\"monthviewEventDetailTemplate||monthviewDefaultEventDetailTemplate\"\r\n        [locale]=\"locale\" [dateFormatter]=\"dateFormatter\" [dir]=\"dir\" [lockSwipeToPrev]=\"lockSwipeToPrev\"\r\n        [lockSwipeToNext]=\"lockSwipeToNext\" [lockSwipes]=\"lockSwipes\" [sliderOptions]=\"sliderOptions\"\r\n        (onRangeChanged)=\"rangeChanged($event)\" (onEventSelected)=\"eventSelected($event)\"\r\n        (onTimeSelected)=\"timeSelected($event)\" (onTitleChanged)=\"titleChanged($event)\">\r\n    </monthview>\r\n    <weekview *ngSwitchCase=\"'week'\" [formatWeekTitle]=\"formatWeekTitle\"\r\n        [formatWeekViewDayHeader]=\"formatWeekViewDayHeader\" [formatHourColumn]=\"formatHourColumn\"\r\n        [startingDayWeek]=\"startingDayWeek\" [allDayLabel]=\"allDayLabel\" [hourParts]=\"hourParts\"\r\n        [autoSelect]=\"autoSelect\" [hourSegments]=\"hourSegments\" [eventSource]=\"eventSource\"\r\n        [markDisabled]=\"markDisabled\" [weekviewHeaderTemplate]=\"weekviewHeaderTemplate||defaultWeekviewHeaderTemplate\"\r\n        [weekviewAllDayEventTemplate]=\"weekviewAllDayEventTemplate||defaultAllDayEventTemplate\"\r\n        [weekviewNormalEventTemplate]=\"weekviewNormalEventTemplate||defaultNormalEventTemplate\"\r\n        [weekviewAllDayEventSectionTemplate]=\"weekviewAllDayEventSectionTemplate||defaultWeekViewAllDayEventSectionTemplate\"\r\n        [weekviewNormalEventSectionTemplate]=\"weekviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate\"\r\n        [weekviewInactiveAllDayEventSectionTemplate]=\"weekviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate\"\r\n        [weekviewInactiveNormalEventSectionTemplate]=\"weekviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate\"\r\n        [locale]=\"locale\" [dateFormatter]=\"dateFormatter\" [dir]=\"dir\" [scrollToHour]=\"scrollToHour\"\r\n        [preserveScrollPosition]=\"preserveScrollPosition\" [lockSwipeToPrev]=\"lockSwipeToPrev\"\r\n        [lockSwipeToNext]=\"lockSwipeToNext\" [lockSwipes]=\"lockSwipes\" [startHour]=\"startHour\" [endHour]=\"endHour\"\r\n        [sliderOptions]=\"sliderOptions\" (onRangeChanged)=\"rangeChanged($event)\"\r\n        (onEventSelected)=\"eventSelected($event)\" (onDayHeaderSelected)=\"daySelected($event)\"\r\n        (onTimeSelected)=\"timeSelected($event)\" (onTitleChanged)=\"titleChanged($event)\">\r\n    </weekview>\r\n    <dayview *ngSwitchCase=\"'day'\" [formatDayTitle]=\"formatDayTitle\" [formatHourColumn]=\"formatHourColumn\"\r\n        [allDayLabel]=\"allDayLabel\" [hourParts]=\"hourParts\" [hourSegments]=\"hourSegments\" [eventSource]=\"eventSource\"\r\n        [markDisabled]=\"markDisabled\"\r\n        [dayviewCategoryItemTemplate]=\"dayviewCategoryItemTemplate||defaultCategoryItemTemplate\"\r\n        [dayviewAllDayEventTemplate]=\"dayviewAllDayEventTemplate||defaultAllDayEventTemplate\"\r\n        [dayviewNormalEventTemplate]=\"dayviewNormalEventTemplate||defaultNormalEventTemplate\"\r\n        [dayviewAllDayEventSectionTemplate]=\"dayviewAllDayEventSectionTemplate||defaultDayViewAllDayEventSectionTemplate\"\r\n        [dayviewNormalEventSectionTemplate]=\"dayviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate\"\r\n        [dayviewInactiveAllDayEventSectionTemplate]=\"dayviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate\"\r\n        [dayviewInactiveNormalEventSectionTemplate]=\"dayviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate\"\r\n        [locale]=\"locale\" [dateFormatter]=\"dateFormatter\" [dir]=\"dir\" [scrollToHour]=\"scrollToHour\"\r\n        [preserveScrollPosition]=\"preserveScrollPosition\" [lockSwipeToPrev]=\"lockSwipeToPrev\"\r\n        [lockSwipeToNext]=\"lockSwipeToNext\" [lockSwipes]=\"lockSwipes\" [startHour]=\"startHour\" [endHour]=\"endHour\"\r\n        [sliderOptions]=\"sliderOptions\" (onRangeChanged)=\"rangeChanged($event)\"\r\n        [dayviewCategorySource]=\"dayviewCategorySource\"\r\n        [dayviewShowCategoryView]=\"dayviewShowCategoryView\"\r\n        (onEventSelected)=\"eventSelected($event)\" (onTimeSelected)=\"timeSelected($event)\"\r\n        (onTitleChanged)=\"titleChanged($event)\">\r\n    </dayview>\r\n</div>", styles: [":host>div{height:100%}.event-detail-container{border-top:2px darkgrey solid}.no-events-label{font-weight:700;color:#a9a9a9;text-align:center}.event-detail{cursor:pointer;white-space:nowrap;text-overflow:ellipsis}.event-category-detail{margin-left:10px}.monthview-eventdetail-timecolumn{width:110px;overflow:hidden}.calendar-event-inner{overflow:hidden;background-color:#3a87ad;color:#fff;height:100%;width:100%;padding:2px;line-height:15px;text-align:initial}@media(max-width:750px){.calendar-event-inner{font-size:12px}}\n"], dependencies: [{ kind: "component", type: i2$1.IonItem, selector: "ion-item", inputs: ["button", "color", "detail", "detailIcon", "disabled", "download", "href", "lines", "mode", "rel", "routerAnimation", "routerDirection", "target", "type"] }, { kind: "component", type: i2$1.IonList, selector: "ion-list", inputs: ["inset", "lines", "mode"] }, { kind: "directive", type: i2.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i2.NgForOf, selector: "[ngFor][ngForOf]", inputs: ["ngForOf", "ngForTrackBy", "ngForTemplate"] }, { kind: "directive", type: i2.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }, { kind: "directive", type: i2.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: i2.NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }, { kind: "directive", type: i2.NgSwitch, selector: "[ngSwitch]", inputs: ["ngSwitch"] }, { kind: "directive", type: i2.NgSwitchCase, selector: "[ngSwitchCase]", inputs: ["ngSwitchCase"] }, { kind: "component", type: MonthViewComponent, selector: "monthview", inputs: ["monthviewDisplayEventTemplate", "monthviewInactiveDisplayEventTemplate", "monthviewEventDetailTemplate", "formatDay", "formatDayHeader", "formatMonthTitle", "eventSource", "startingDayMonth", "showEventDetail", "noEventsLabel", "autoSelect", "markDisabled", "locale", "dateFormatter", "dir", "lockSwipeToPrev", "lockSwipeToNext", "lockSwipes", "sliderOptions"], outputs: ["onRangeChanged", "onEventSelected", "onTimeSelected", "onTitleChanged"] }, { kind: "component", type: WeekViewComponent, selector: "weekview", inputs: ["weekviewHeaderTemplate", "weekviewAllDayEventTemplate", "weekviewNormalEventTemplate", "weekviewAllDayEventSectionTemplate", "weekviewNormalEventSectionTemplate", "weekviewInactiveAllDayEventSectionTemplate", "weekviewInactiveNormalEventSectionTemplate", "formatWeekTitle", "formatWeekViewDayHeader", "formatHourColumn", "startingDayWeek", "allDayLabel", "hourParts", "eventSource", "autoSelect", "markDisabled", "locale", "dateFormatter", "dir", "scrollToHour", "preserveScrollPosition", "lockSwipeToPrev", "lockSwipeToNext", "lockSwipes", "startHour", "endHour", "sliderOptions", "hourSegments"], outputs: ["onRangeChanged", "onEventSelected", "onTimeSelected", "onDayHeaderSelected", "onTitleChanged"] }, { kind: "component", type: DayViewComponent, selector: "dayview", inputs: ["dayviewCategoryItemTemplate", "dayviewAllDayEventTemplate", "dayviewNormalEventTemplate", "dayviewAllDayEventSectionTemplate", "dayviewNormalEventSectionTemplate", "dayviewInactiveAllDayEventSectionTemplate", "dayviewInactiveNormalEventSectionTemplate", "formatHourColumn", "formatDayTitle", "allDayLabel", "hourParts", "eventSource", "markDisabled", "locale", "dateFormatter", "dir", "scrollToHour", "preserveScrollPosition", "lockSwipeToPrev", "lockSwipeToNext", "lockSwipes", "startHour", "endHour", "sliderOptions", "hourSegments", "dayviewCategorySource", "dayviewShowCategoryView"], outputs: ["onRangeChanged", "onEventSelected", "onTimeSelected", "onTitleChanged"] }, { kind: "pipe", type: i2.DatePipe, name: "date" }] }); }
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: CalendarComponent, decorators: [{
             type: Component,
-            args: [{ selector: 'calendar', standalone: false, template: `
-        <ng-template #monthviewDefaultDisplayEventTemplate let-view="view" let-row="row" let-col="col">
-            {{view.dates[row*7+col].label}}
-        </ng-template>
-        <ng-template #monthviewDefaultEventDetailTemplate let-showEventDetail="showEventDetail" let-selectedDate="selectedDate" let-noEventsLabel="noEventsLabel">
-            <ion-list class="event-detail-container" has-bouncing="false" *ngIf="showEventDetail" overflow-scroll="false">
-                <ion-item *ngFor="let event of selectedDate?.events" (click)="eventSelected(event)">
-                        <span *ngIf="!event.allDay" class="monthview-eventdetail-timecolumn">{{event.startTime|date: 'HH:mm'}}
-                            -
-                            {{event.endTime|date: 'HH:mm'}}
-                        </span>
-                    <span *ngIf="event.allDay" class="monthview-eventdetail-timecolumn">{{allDayLabel}}</span>
-                    <span class="event-detail">  |  {{event.title}}</span>
-                </ion-item>
-                <ion-item *ngIf="selectedDate?.events.length==0">
-                    <div class="no-events-label">{{noEventsLabel}}</div>
-                </ion-item>
-            </ion-list>
-        </ng-template>
-        <ng-template #defaultWeekviewHeaderTemplate let-viewDate="viewDate">
-            {{ viewDate.dayHeader }}
-        </ng-template>
-        <ng-template #defaultAllDayEventTemplate let-displayEvent="displayEvent">
-            <div class="calendar-event-inner">{{displayEvent.event.title}}</div>
-        </ng-template>
-        <ng-template #defaultNormalEventTemplate let-displayEvent="displayEvent">
-            <div class="calendar-event-inner">{{displayEvent.event.title}}</div>
-        </ng-template>
-        <ng-template #defaultWeekViewAllDayEventSectionTemplate let-day="day" let-eventTemplate="eventTemplate">
-            <div [ngClass]="{'calendar-event-wrap': day.events}" *ngIf="day.events"
-                 [ngStyle]="{height: 25*day.events.length+'px'}">
-                <div *ngFor="let displayEvent of day.events" class="calendar-event" tappable
-                     (click)="eventSelected(displayEvent.event)"
-                     [ngStyle]="{top: 25*displayEvent.position+'px', width: 100*(displayEvent.endIndex-displayEvent.startIndex)+'%', height: '25px'}">
-                    <ng-template [ngTemplateOutlet]="eventTemplate"
-                                 [ngTemplateOutletContext]="{displayEvent:displayEvent}">
-                    </ng-template>
-                </div>
-            </div>
-        </ng-template>
-        <ng-template #defaultDayViewAllDayEventSectionTemplate let-allDayEvents="allDayEvents" let-eventTemplate="eventTemplate">
-            <div *ngFor="let displayEvent of allDayEvents; let eventIndex=index"
-                 class="calendar-event" tappable
-                 (click)="eventSelected(displayEvent.event)"
-                 [ngStyle]="{top: 25*eventIndex+'px',width: '100%',height:'25px'}">
-                <ng-template [ngTemplateOutlet]="eventTemplate"
-                             [ngTemplateOutletContext]="{displayEvent:displayEvent}">
-                </ng-template>
-            </div>
-        </ng-template>
-        <ng-template #defaultNormalEventSectionTemplate let-tm="tm" let-hourParts="hourParts" let-eventTemplate="eventTemplate">
-            <div [ngClass]="{'calendar-event-wrap': tm.events}" *ngIf="tm.events">
-                <div *ngFor="let displayEvent of tm.events" class="calendar-event" tappable
-                     (click)="eventSelected(displayEvent.event)"
-                     [ngStyle]="{top: (37*displayEvent.startOffset/hourParts)+'px',left: 100/displayEvent.overlapNumber*displayEvent.position+'%', width: 100/displayEvent.overlapNumber+'%', height: 37*(displayEvent.endIndex -displayEvent.startIndex - (displayEvent.endOffset + displayEvent.startOffset)/hourParts)+'px'}">
-                    <ng-template [ngTemplateOutlet]="eventTemplate"
-                                 [ngTemplateOutletContext]="{displayEvent:displayEvent}">
-                    </ng-template>
-                </div>
-            </div>
-        </ng-template>
-        <ng-template #defaultInactiveAllDayEventSectionTemplate>
-        </ng-template>
-        <ng-template #defaultInactiveNormalEventSectionTemplate>
-        </ng-template>
-
-        <div [ngSwitch]="calendarMode" class="{{calendarMode}}view-container">
-            <monthview *ngSwitchCase="'month'"
-                [formatDay]="formatDay"
-                [formatDayHeader]="formatDayHeader"
-                [formatMonthTitle]="formatMonthTitle"
-                [startingDayMonth]="startingDayMonth"
-                [showEventDetail]="showEventDetail"
-                [noEventsLabel]="noEventsLabel"
-                [autoSelect]="autoSelect"
-                [eventSource]="eventSource"
-                [markDisabled]="markDisabled"
-                [monthviewDisplayEventTemplate]="monthviewDisplayEventTemplate||monthviewDefaultDisplayEventTemplate"
-                [monthviewInactiveDisplayEventTemplate]="monthviewInactiveDisplayEventTemplate||monthviewDefaultDisplayEventTemplate"
-                [monthviewEventDetailTemplate]="monthviewEventDetailTemplate||monthviewDefaultEventDetailTemplate"
-                [locale]="locale"
-                [dateFormatter]="dateFormatter"
-                [dir]="dir"
-                [lockSwipeToPrev]="lockSwipeToPrev"
-                [lockSwipeToNext]="lockSwipeToNext"
-                [lockSwipes]="lockSwipes"
-                [sliderOptions]="sliderOptions"
-                (onRangeChanged)="rangeChanged($event)"
-                (onEventSelected)="eventSelected($event)"
-                (onTimeSelected)="timeSelected($event)"
-                (onTitleChanged)="titleChanged($event)">
-            </monthview>
-            <weekview *ngSwitchCase="'week'"
-                [formatWeekTitle]="formatWeekTitle"
-                [formatWeekViewDayHeader]="formatWeekViewDayHeader"
-                [formatHourColumn]="formatHourColumn"
-                [startingDayWeek]="startingDayWeek"
-                [allDayLabel]="allDayLabel"
-                [hourParts]="hourParts"
-                [autoSelect]="autoSelect"
-                [hourSegments]="hourSegments"
-                [eventSource]="eventSource"
-                [markDisabled]="markDisabled"
-                [weekviewHeaderTemplate]="weekviewHeaderTemplate||defaultWeekviewHeaderTemplate"
-                [weekviewAllDayEventTemplate]="weekviewAllDayEventTemplate||defaultAllDayEventTemplate"
-                [weekviewNormalEventTemplate]="weekviewNormalEventTemplate||defaultNormalEventTemplate"
-                [weekviewAllDayEventSectionTemplate]="weekviewAllDayEventSectionTemplate||defaultWeekViewAllDayEventSectionTemplate"
-                [weekviewNormalEventSectionTemplate]="weekviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate"
-                [weekviewInactiveAllDayEventSectionTemplate]="weekviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate"
-                [weekviewInactiveNormalEventSectionTemplate]="weekviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate"
-                [locale]="locale"
-                [dateFormatter]="dateFormatter"
-                [dir]="dir"
-                [scrollToHour]="scrollToHour"
-                [preserveScrollPosition]="preserveScrollPosition"
-                [lockSwipeToPrev]="lockSwipeToPrev"
-                [lockSwipeToNext]="lockSwipeToNext"
-                [lockSwipes]="lockSwipes"
-                [startHour]="startHour"
-                [endHour]="endHour"
-                [sliderOptions]="sliderOptions"
-                (onRangeChanged)="rangeChanged($event)"
-                (onEventSelected)="eventSelected($event)"
-                (onDayHeaderSelected)="daySelected($event)"
-                (onTimeSelected)="timeSelected($event)"
-                (onTitleChanged)="titleChanged($event)">
-            </weekview>
-            <dayview *ngSwitchCase="'day'"
-                [formatDayTitle]="formatDayTitle"
-                [formatHourColumn]="formatHourColumn"
-                [allDayLabel]="allDayLabel"
-                [hourParts]="hourParts"
-                [hourSegments]="hourSegments"
-                [eventSource]="eventSource"
-                [markDisabled]="markDisabled"
-                [dayviewAllDayEventTemplate]="dayviewAllDayEventTemplate||defaultAllDayEventTemplate"
-                [dayviewNormalEventTemplate]="dayviewNormalEventTemplate||defaultNormalEventTemplate"
-                [dayviewAllDayEventSectionTemplate]="dayviewAllDayEventSectionTemplate||defaultDayViewAllDayEventSectionTemplate"
-                [dayviewNormalEventSectionTemplate]="dayviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate"
-                [dayviewInactiveAllDayEventSectionTemplate]="dayviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate"
-                [dayviewInactiveNormalEventSectionTemplate]="dayviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate"
-                [locale]="locale"
-                [dateFormatter]="dateFormatter"
-                [dir]="dir"
-                [scrollToHour]="scrollToHour"
-                [preserveScrollPosition]="preserveScrollPosition"
-                [lockSwipeToPrev]="lockSwipeToPrev"
-                [lockSwipeToNext]="lockSwipeToNext"
-                [lockSwipes]="lockSwipes"
-                [startHour]="startHour"
-                [endHour]="endHour"
-                [sliderOptions]="sliderOptions"
-                (onRangeChanged)="rangeChanged($event)"
-                (onEventSelected)="eventSelected($event)"
-                (onTimeSelected)="timeSelected($event)"
-                (onTitleChanged)="titleChanged($event)">
-            </dayview>
-        </div>
-    `, providers: [CalendarService], styles: [":host>div{height:100%}.event-detail-container{border-top:2px darkgrey solid}.no-events-label{font-weight:700;color:#a9a9a9;text-align:center}.event-detail{cursor:pointer;white-space:nowrap;text-overflow:ellipsis}.monthview-eventdetail-timecolumn{width:110px;overflow:hidden}.calendar-event-inner{overflow:hidden;background-color:#3a87ad;color:#fff;height:100%;width:100%;padding:2px;line-height:15px;text-align:initial}@media(max-width:750px){.calendar-event-inner{font-size:12px}}\n"] }]
+            args: [{ selector: 'calendar', providers: [CalendarService], standalone: false, template: "<ng-template #monthviewDefaultDisplayEventTemplate let-view=\"view\" let-row=\"row\" let-col=\"col\">\r\n    {{view.dates[row*7+col].label}}\r\n</ng-template>\r\n<ng-template #monthviewDefaultEventDetailTemplate let-showEventDetail=\"showEventDetail\" let-selectedDate=\"selectedDate\"\r\n    let-noEventsLabel=\"noEventsLabel\">\r\n    <ion-list class=\"event-detail-container\" has-bouncing=\"false\" *ngIf=\"showEventDetail\" overflow-scroll=\"false\">\r\n        <ion-item *ngFor=\"let event of selectedDate?.events\" (click)=\"eventSelected(event)\">\r\n            <span *ngIf=\"!event.allDay\" class=\"monthview-eventdetail-timecolumn\">{{event.startTime|date: 'HH:mm'}}\r\n                -\r\n                {{event.endTime|date: 'HH:mm'}}\r\n            </span>\r\n            <span *ngIf=\"event.allDay\" class=\"monthview-eventdetail-timecolumn\">{{allDayLabel}}</span>\r\n            <span class=\"event-detail\"> | {{event.title}} </span>\r\n            <span class=\"event-detail event-category-detail\" *ngIf=\"event.categoryId\">[{{event.categoryName}}]</span>\r\n        </ion-item>\r\n        <ion-item *ngIf=\"selectedDate?.events.length==0\">\r\n            <div class=\"no-events-label\">{{noEventsLabel}}</div>\r\n        </ion-item>\r\n    </ion-list>\r\n</ng-template>\r\n<ng-template #defaultWeekviewHeaderTemplate let-viewDate=\"viewDate\">\r\n    {{ viewDate.dayHeader }}\r\n</ng-template>\r\n<ng-template #defaultCategoryItemTemplate let-category=\"category\">\r\n    {{ category }}\r\n</ng-template>\r\n<ng-template #defaultAllDayEventTemplate let-displayEvent=\"displayEvent\">\r\n    <div class=\"calendar-event-inner\">{{displayEvent.event.title}}</div>\r\n</ng-template>\r\n<ng-template #defaultNormalEventTemplate let-displayEvent=\"displayEvent\">\r\n    <div class=\"calendar-event-inner\">{{displayEvent.event.title}}</div>\r\n</ng-template>\r\n<ng-template #defaultWeekViewAllDayEventSectionTemplate let-day=\"day\" let-eventTemplate=\"eventTemplate\">\r\n    <div [ngClass]=\"{'calendar-event-wrap': day.events}\" *ngIf=\"day.events\"\r\n        [ngStyle]=\"{height: 25*day.events.length+'px'}\">\r\n        <div *ngFor=\"let displayEvent of day.events\" class=\"calendar-event\" tappable\r\n            (click)=\"eventSelected(displayEvent.event)\"\r\n            [ngStyle]=\"{top: 25*displayEvent.position+'px', width: 100*(displayEvent.endIndex-displayEvent.startIndex)+'%', height: '25px'}\">\r\n            <ng-template [ngTemplateOutlet]=\"eventTemplate\" [ngTemplateOutletContext]=\"{displayEvent:displayEvent}\">\r\n            </ng-template>\r\n        </div>\r\n    </div>\r\n</ng-template>\r\n<ng-template #defaultDayViewAllDayEventSectionTemplate let-allDayEvents=\"allDayEvents\"\r\n    let-eventTemplate=\"eventTemplate\">\r\n    <div *ngFor=\"let displayEvent of allDayEvents; let eventIndex=index\" class=\"calendar-event\" tappable\r\n        (click)=\"eventSelected(displayEvent.event)\" [ngStyle]=\"{top: 25*eventIndex+'px',width: '100%',height:'25px'}\">\r\n        <ng-template [ngTemplateOutlet]=\"eventTemplate\" [ngTemplateOutletContext]=\"{displayEvent:displayEvent}\">\r\n        </ng-template>\r\n    </div>\r\n</ng-template>\r\n<ng-template #defaultNormalEventSectionTemplate let-tm=\"tm\" let-hourParts=\"hourParts\" let-eventTemplate=\"eventTemplate\">\r\n    <div [ngClass]=\"{'calendar-event-wrap': tm.events}\" *ngIf=\"tm.events\">\r\n        <div *ngFor=\"let displayEvent of tm.events\" class=\"calendar-event\" tappable\r\n            (click)=\"eventSelected(displayEvent.event)\"\r\n            [ngStyle]=\"{top: (37*displayEvent.startOffset/hourParts)+'px',left: 100/displayEvent.overlapNumber*displayEvent.position+'%', width: 100/displayEvent.overlapNumber+'%', height: 37*(displayEvent.endIndex -displayEvent.startIndex - (displayEvent.endOffset + displayEvent.startOffset)/hourParts)+'px'}\">\r\n            <ng-template [ngTemplateOutlet]=\"eventTemplate\" [ngTemplateOutletContext]=\"{displayEvent:displayEvent}\">\r\n            </ng-template>\r\n        </div>\r\n    </div>\r\n</ng-template>\r\n<ng-template #defaultInactiveAllDayEventSectionTemplate>\r\n</ng-template>\r\n<ng-template #defaultInactiveNormalEventSectionTemplate>\r\n</ng-template>\r\n\r\n<div [ngSwitch]=\"calendarMode\" class=\"{{calendarMode}}view-container\">\r\n    <monthview *ngSwitchCase=\"'month'\" [formatDay]=\"formatDay\" [formatDayHeader]=\"formatDayHeader\"\r\n        [formatMonthTitle]=\"formatMonthTitle\" [startingDayMonth]=\"startingDayMonth\" [showEventDetail]=\"showEventDetail\"\r\n        [noEventsLabel]=\"noEventsLabel\" [autoSelect]=\"autoSelect\" [eventSource]=\"eventSource\"\r\n        [markDisabled]=\"markDisabled\"\r\n        [monthviewDisplayEventTemplate]=\"monthviewDisplayEventTemplate||monthviewDefaultDisplayEventTemplate\"\r\n        [monthviewInactiveDisplayEventTemplate]=\"monthviewInactiveDisplayEventTemplate||monthviewDefaultDisplayEventTemplate\"\r\n        [monthviewEventDetailTemplate]=\"monthviewEventDetailTemplate||monthviewDefaultEventDetailTemplate\"\r\n        [locale]=\"locale\" [dateFormatter]=\"dateFormatter\" [dir]=\"dir\" [lockSwipeToPrev]=\"lockSwipeToPrev\"\r\n        [lockSwipeToNext]=\"lockSwipeToNext\" [lockSwipes]=\"lockSwipes\" [sliderOptions]=\"sliderOptions\"\r\n        (onRangeChanged)=\"rangeChanged($event)\" (onEventSelected)=\"eventSelected($event)\"\r\n        (onTimeSelected)=\"timeSelected($event)\" (onTitleChanged)=\"titleChanged($event)\">\r\n    </monthview>\r\n    <weekview *ngSwitchCase=\"'week'\" [formatWeekTitle]=\"formatWeekTitle\"\r\n        [formatWeekViewDayHeader]=\"formatWeekViewDayHeader\" [formatHourColumn]=\"formatHourColumn\"\r\n        [startingDayWeek]=\"startingDayWeek\" [allDayLabel]=\"allDayLabel\" [hourParts]=\"hourParts\"\r\n        [autoSelect]=\"autoSelect\" [hourSegments]=\"hourSegments\" [eventSource]=\"eventSource\"\r\n        [markDisabled]=\"markDisabled\" [weekviewHeaderTemplate]=\"weekviewHeaderTemplate||defaultWeekviewHeaderTemplate\"\r\n        [weekviewAllDayEventTemplate]=\"weekviewAllDayEventTemplate||defaultAllDayEventTemplate\"\r\n        [weekviewNormalEventTemplate]=\"weekviewNormalEventTemplate||defaultNormalEventTemplate\"\r\n        [weekviewAllDayEventSectionTemplate]=\"weekviewAllDayEventSectionTemplate||defaultWeekViewAllDayEventSectionTemplate\"\r\n        [weekviewNormalEventSectionTemplate]=\"weekviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate\"\r\n        [weekviewInactiveAllDayEventSectionTemplate]=\"weekviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate\"\r\n        [weekviewInactiveNormalEventSectionTemplate]=\"weekviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate\"\r\n        [locale]=\"locale\" [dateFormatter]=\"dateFormatter\" [dir]=\"dir\" [scrollToHour]=\"scrollToHour\"\r\n        [preserveScrollPosition]=\"preserveScrollPosition\" [lockSwipeToPrev]=\"lockSwipeToPrev\"\r\n        [lockSwipeToNext]=\"lockSwipeToNext\" [lockSwipes]=\"lockSwipes\" [startHour]=\"startHour\" [endHour]=\"endHour\"\r\n        [sliderOptions]=\"sliderOptions\" (onRangeChanged)=\"rangeChanged($event)\"\r\n        (onEventSelected)=\"eventSelected($event)\" (onDayHeaderSelected)=\"daySelected($event)\"\r\n        (onTimeSelected)=\"timeSelected($event)\" (onTitleChanged)=\"titleChanged($event)\">\r\n    </weekview>\r\n    <dayview *ngSwitchCase=\"'day'\" [formatDayTitle]=\"formatDayTitle\" [formatHourColumn]=\"formatHourColumn\"\r\n        [allDayLabel]=\"allDayLabel\" [hourParts]=\"hourParts\" [hourSegments]=\"hourSegments\" [eventSource]=\"eventSource\"\r\n        [markDisabled]=\"markDisabled\"\r\n        [dayviewCategoryItemTemplate]=\"dayviewCategoryItemTemplate||defaultCategoryItemTemplate\"\r\n        [dayviewAllDayEventTemplate]=\"dayviewAllDayEventTemplate||defaultAllDayEventTemplate\"\r\n        [dayviewNormalEventTemplate]=\"dayviewNormalEventTemplate||defaultNormalEventTemplate\"\r\n        [dayviewAllDayEventSectionTemplate]=\"dayviewAllDayEventSectionTemplate||defaultDayViewAllDayEventSectionTemplate\"\r\n        [dayviewNormalEventSectionTemplate]=\"dayviewNormalEventSectionTemplate||defaultNormalEventSectionTemplate\"\r\n        [dayviewInactiveAllDayEventSectionTemplate]=\"dayviewInactiveAllDayEventSectionTemplate||defaultInactiveAllDayEventSectionTemplate\"\r\n        [dayviewInactiveNormalEventSectionTemplate]=\"dayviewInactiveNormalEventSectionTemplate||defaultInactiveNormalEventSectionTemplate\"\r\n        [locale]=\"locale\" [dateFormatter]=\"dateFormatter\" [dir]=\"dir\" [scrollToHour]=\"scrollToHour\"\r\n        [preserveScrollPosition]=\"preserveScrollPosition\" [lockSwipeToPrev]=\"lockSwipeToPrev\"\r\n        [lockSwipeToNext]=\"lockSwipeToNext\" [lockSwipes]=\"lockSwipes\" [startHour]=\"startHour\" [endHour]=\"endHour\"\r\n        [sliderOptions]=\"sliderOptions\" (onRangeChanged)=\"rangeChanged($event)\"\r\n        [dayviewCategorySource]=\"dayviewCategorySource\"\r\n        [dayviewShowCategoryView]=\"dayviewShowCategoryView\"\r\n        (onEventSelected)=\"eventSelected($event)\" (onTimeSelected)=\"timeSelected($event)\"\r\n        (onTitleChanged)=\"titleChanged($event)\">\r\n    </dayview>\r\n</div>", styles: [":host>div{height:100%}.event-detail-container{border-top:2px darkgrey solid}.no-events-label{font-weight:700;color:#a9a9a9;text-align:center}.event-detail{cursor:pointer;white-space:nowrap;text-overflow:ellipsis}.event-category-detail{margin-left:10px}.monthview-eventdetail-timecolumn{width:110px;overflow:hidden}.calendar-event-inner{overflow:hidden;background-color:#3a87ad;color:#fff;height:100%;width:100%;padding:2px;line-height:15px;text-align:initial}@media(max-width:750px){.calendar-event-inner{font-size:12px}}\n"] }]
         }], ctorParameters: () => [{ type: CalendarService }, { type: undefined, decorators: [{
                     type: Inject,
                     args: [LOCALE_ID]
@@ -3562,6 +2127,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
                 type: Input
             }], weekviewNormalEventTemplate: [{
                 type: Input
+            }], dayviewCategoryItemTemplate: [{
+                type: Input
             }], dayviewAllDayEventTemplate: [{
                 type: Input
             }], dayviewNormalEventTemplate: [{
@@ -3604,6 +2171,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
                 type: Input
             }], sliderOptions: [{
                 type: Input
+            }], dayviewCategorySource: [{
+                type: Input
+            }], dayviewShowCategoryView: [{
+                type: Input
             }], onCurrentDateChanged: [{
                 type: Output
             }], onRangeChanged: [{
@@ -3620,8 +2191,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
 
 class NgCalendarModule {
     static { this.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule }); }
-    static { this.ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, declarations: [MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent], imports: [IonicModule, CommonModule, SwiperModule], exports: [CalendarComponent] }); }
-    static { this.ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, imports: [IonicModule, CommonModule, SwiperModule] }); }
+    static { this.ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, declarations: [MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent], imports: [IonicModule, CommonModule], exports: [CalendarComponent] }); }
+    static { this.ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, imports: [IonicModule, CommonModule] }); }
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImport: i0, type: NgCalendarModule, decorators: [{
             type: NgModule,
@@ -3629,7 +2200,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "21.2.25", ngImpo
                     declarations: [
                         MonthViewComponent, WeekViewComponent, DayViewComponent, CalendarComponent, initPositionScrollComponent
                     ],
-                    imports: [IonicModule, CommonModule, SwiperModule],
+                    imports: [IonicModule, CommonModule],
                     exports: [CalendarComponent]
                 }]
         }] });
