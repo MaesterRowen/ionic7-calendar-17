@@ -11,7 +11,7 @@
   ],
   "main": "dist/fesm2022/ionic7-calendar-17.mjs",
   "module": "dist/fesm2022/ionic7-calendar-17.mjs",
-  "types": "dist/index.d.ts",
+  "types": "dist/types/ionic7-calendar-17.d.ts",
   "author": {
     "name": "twinssbc"
   },
@@ -35,20 +35,20 @@
     "swiper": "^8.4.6"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "20.3.40",
-    "@angular/cli": "20.3.40",
-    "@angular/common": "20.3.34",
-    "@angular/compiler": "20.3.34",
-    "@angular/compiler-cli": "20.3.34",
-    "@angular/core": "20.3.34",
-    "@angular/forms": "20.3.34",
-    "@angular/platform-browser": "20.3.34",
-    "@angular/router": "20.3.34",
+    "@angular-devkit/build-angular": "21.2.27",
+    "@angular/cli": "21.2.27",
+    "@angular/common": "21.2.25",
+    "@angular/compiler": "21.2.25",
+    "@angular/compiler-cli": "21.2.25",
+    "@angular/core": "21.2.25",
+    "@angular/forms": "21.2.25",
+    "@angular/platform-browser": "21.2.25",
+    "@angular/router": "21.2.25",
     "@ionic/angular": "7.8.6",
-    "ng-packagr": "20.3.2",
+    "ng-packagr": "21.2.7",
     "rxjs": "7.8.2",
     "swiper": "8.4.6",
-    "typescript": "5.8.3",
-    "zone.js": "0.15.1"
+    "typescript": "5.9.3",
+    "zone.js": "0.16.3"
   }
 }
