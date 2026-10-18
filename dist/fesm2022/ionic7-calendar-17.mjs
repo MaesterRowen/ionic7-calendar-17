@@ -2,10 +2,11 @@ import * as i0 from '@angular/core';
 import { Injectable, EventEmitter, Output, Input, ViewChild, Component, ViewEncapsulation, HostBinding, LOCALE_ID, Inject, NgModule } from '@angular/core';
 import * as i2 from '@angular/common';
 import { DatePipe, CommonModule } from '@angular/common';
-import * as i2$1 from '@ionic/angular';
-import { IonicSlides, IonicModule } from '@ionic/angular';
+import * as i2$1 from '@ionic/angular/lazy';
+import { IonicModule } from '@ionic/angular/lazy';
 import SwiperCore, { Swiper } from 'swiper';
 import { Subject } from 'rxjs';
+import { IonicSlides } from '@ionic/angular';
 
 class CalendarService {
     constructor() {

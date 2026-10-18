@@ -2,7 +2,7 @@ import * as i0 from '@angular/core';
 import { TemplateRef, EventEmitter, OnInit, OnDestroy, OnChanges, AfterViewInit, NgZone, ElementRef, SimpleChanges } from '@angular/core';
 import { SwiperOptions } from 'swiper/types';
 import { Observable } from 'rxjs';
-import * as i6 from '@ionic/angular';
+import * as i6 from '@ionic/angular/lazy';
 import * as i7 from '@angular/common';
 
 interface IEvent {
