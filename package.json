@@ -7,7 +7,8 @@
     "calendar"
   ],
   "files": [
-    "dist/**",
+    "dist/fesm2022/**",
+    "dist/types/**",
     "calendar.interface.d.ts"
   ],
   "main": "dist/fesm2022/ionic7-calendar-17.mjs",
@@ -23,8 +24,7 @@
     "url": "git+https://github.com/twinssbc/Ionic2-Calendar.git"
   },
   "scripts": {
-    "build": "rm -rf dist && ng build",
-    "prepare": "ng build"
+    "build": "ng build"
   },
   "dependencies": {
     "tslib": "^2.3.0"
